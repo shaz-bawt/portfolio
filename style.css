@@ -94,7 +94,7 @@ a { color: var(--accent); text-decoration: none; transition: color .2s; }
 
 /* ===== LAYOUT ===== */
 .wrap { max-width:var(--maxw); margin:0 auto; padding:0 clamp(18px,5vw,32px); position:relative; z-index:1; }
-section { padding: clamp(48px,8vw,96px) 0; }
+section { padding: clamp(32px,5vw,60px) 0; }
 
 .kicker { font-family:var(--mono); font-size:12.5px; font-weight:500; color:var(--accent); letter-spacing:2.5px; text-transform:uppercase; display:inline-flex; align-items:center; gap:9px; margin-bottom:20px; }
 .kicker::before { content:""; width:26px; height:1px; background:linear-gradient(90deg,var(--accent),transparent); }
@@ -102,7 +102,7 @@ section { padding: clamp(48px,8vw,96px) 0; }
 h1,h2,h3,h4 { font-family:var(--display); font-weight:700; line-height:1.12; letter-spacing:-.02em; }
 .section-title { font-size:clamp(26px,4.5vw,40px); color:var(--text); margin-bottom:14px; }
 .section-title .accent { background:linear-gradient(120deg,var(--accent),var(--accent-2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
-.section-sub { color:var(--text-2); font-size:18px; max-width:62ch; margin-bottom:48px; }
+.section-sub { color:var(--text-2); font-size:18px; max-width:62ch; margin-bottom:32px; }
 
 /* ===== GLASS PANELS ===== */
 .panel { background:linear-gradient(160deg,rgba(255,255,255,.045),rgba(255,255,255,.012)); border:1px solid var(--line); border-radius:var(--r); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); position:relative; transition:border-color .3s var(--ease),transform .3s var(--ease),box-shadow .3s var(--ease); }
@@ -251,9 +251,18 @@ h1,h2,h3,h4 { font-family:var(--display); font-weight:700; line-height:1.12; let
 
 /* ===== ORIGINAL ROLE ICONS ===== */
 .ricon { display:inline-grid; place-items:center; width:100%; height:100%; }
-.ricon svg { width:60%; height:60%; }
-.work-card .glyph .ricon svg { width:58%; height:58%; }
+.ricon svg { width:66%; height:66%; }
+.work-card .glyph .ricon svg { width:64%; height:64%; }
 /* icon used inline beside case headings */
 .case h2 .ricon { display:inline-grid; width:34px; height:34px; vertical-align:-8px; margin-right:6px; border-radius:9px;
   background:linear-gradient(150deg,rgba(255,255,255,.06),rgba(255,255,255,.02)); border:1px solid var(--line); }
-.case h2 .ricon svg { width:64%; height:64%; }
+.case h2 .ricon svg { width:74%; height:74%; }
+
+/* ===== GAMES / TITLES CALLOUT ===== */
+.titles { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:14px; }
+.titles .tlabel { font-family:var(--mono); font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
+.game { font-family:var(--body); font-weight:500; font-size:13px; color:var(--text); background:rgba(74,214,255,.08);
+  border:1px solid rgba(74,214,255,.28); padding:4px 11px; border-radius:100px; }
+/* compact games line for home cards */
+.work-card .titles { margin-top:10px; }
+.work-card .game { font-size:12px; padding:3px 9px; }

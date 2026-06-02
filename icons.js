@@ -1,51 +1,67 @@
-// Original abstract SVG icons. Each represents a role's genre/domain,
-// not any company brand. All paths are hand-built generic glyphs.
-// Usage: <span class="ricon" data-icon="telemetry"></span>
+// Original abstract role icons. Bold, filled, console-UI styled.
+// Each evokes a role's genre/domain, not any company brand or logo.
 (function () {
-  const A = 'var(--accent)', A2 = 'var(--accent-2)', A3 = 'var(--accent-3)', AM = 'var(--amber)';
-  const S = (inner) => `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+  const A='var(--accent)', A2='var(--accent-2)', A3='var(--accent-3)', AM='var(--amber)';
+  // gradient defs reused per-icon via unique ids
+  const wrap = (id, body, defs='') => `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>${defs}<linearGradient id="g${id}" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse"><stop stop-color="${A}"/><stop offset="1" stop-color="${A2}"/></linearGradient></defs>${body}</svg>`;
 
   const icons = {
-    // PlayStation telemetry: signal waves radiating from a node
-    telemetry: S(`
-      <circle cx="24" cy="30" r="3.5" fill="${A}"/>
-      <path d="M16 26a11 11 0 0 1 16 0" stroke="${A}" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M11 21a18 18 0 0 1 26 0" stroke="${A2}" stroke-width="2.5" stroke-linecap="round" opacity=".75"/>
-      <path d="M6 16a25 25 0 0 1 36 0" stroke="${A3}" stroke-width="2.5" stroke-linecap="round" opacity=".5"/>`),
+    // TELEMETRY (PlayStation): broadcast tower emitting concentric signal rings
+    telemetry: wrap('tel', `
+      <circle cx="32" cy="40" r="16" fill="url(#gtel)" opacity=".18"/>
+      <path d="M22 30a14 14 0 0 1 20 0" stroke="${A3}" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M16 24a22 22 0 0 1 32 0" stroke="${A}" stroke-width="3.5" stroke-linecap="round" opacity=".7"/>
+      <path d="M32 40l4-16h-8l4 16z" fill="url(#gtel)"/>
+      <circle cx="32" cy="22" r="4" fill="#fff"/>
+      <circle cx="32" cy="44" r="3" fill="${A3}"/>`),
 
-    // ZeniMax / AAA insights: layered bar chart inside a frame
-    insights: S(`
-      <rect x="7" y="9" width="34" height="30" rx="3" stroke="${A2}" stroke-width="2.5"/>
-      <rect x="13" y="24" width="4" height="9" rx="1.5" fill="${A}"/>
-      <rect x="22" y="19" width="4" height="14" rx="1.5" fill="${A3}"/>
-      <rect x="31" y="15" width="4" height="18" rx="1.5" fill="${A2}"/>`),
+    // INSIGHTS (ZeniMax/AAA): solid bar chart with a rising trend line
+    insights: wrap('ins', `
+      <rect x="12" y="36" width="9" height="16" rx="2" fill="${A}" opacity=".55"/>
+      <rect x="27" y="28" width="9" height="24" rx="2" fill="${A3}" opacity=".7"/>
+      <rect x="42" y="18" width="9" height="34" rx="2" fill="url(#gins)"/>
+      <path d="M14 34l13-9 11 4 9-15" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="47" cy="14" r="3.5" fill="#fff"/>`),
 
-    // HiDef rhythm/dance live-service: equalizer waves
-    rhythm: S(`
-      <rect x="9" y="20" width="4.5" height="8" rx="2.25" fill="${A}"/>
-      <rect x="17" y="14" width="4.5" height="20" rx="2.25" fill="${A3}"/>
-      <rect x="25.5" y="9" width="4.5" height="30" rx="2.25" fill="${A2}"/>
-      <rect x="34" y="17" width="4.5" height="14" rx="2.25" fill="${A}"/>`),
+    // LIVE-SERVICE (HiDef): bold equalizer / pulse bars
+    rhythm: wrap('rhy', `
+      <rect x="12" y="26" width="7" height="12" rx="3.5" fill="${A}"/>
+      <rect x="22" y="18" width="7" height="28" rx="3.5" fill="${A3}"/>
+      <rect x="32" y="10" width="7" height="44" rx="3.5" fill="url(#grhy)"/>
+      <rect x="42" y="20" width="7" height="24" rx="3.5" fill="${A2}"/>
+      <rect x="52" y="28" width="0" height="0"/>`),
 
-    // Guild Wars 2 / MMO: a sword crossed shield crest (generic fantasy)
-    mmo: S(`
-      <path d="M24 6l11 4v9c0 8-5 13-11 16-6-3-11-8-11-16v-9l11-4z" stroke="${A}" stroke-width="2.5" stroke-linejoin="round"/>
-      <path d="M24 14v16" stroke="${A3}" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M19 22l5-3 5 3" stroke="${A2}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`),
+    // MMO (Guild Wars 2): bold shield crest with a sword
+    mmo: wrap('mmo', `
+      <path d="M32 8l18 6v12c0 13-8 20-18 24-10-4-18-11-18-24V14l18-6z" fill="url(#gmmo)" opacity=".22"/>
+      <path d="M32 8l18 6v12c0 13-8 20-18 24-10-4-18-11-18-24V14l18-6z" stroke="url(#gmmo)" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M32 18v22" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M25 26l7-5 7 5" stroke="${A3}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="32" cy="44" r="2.5" fill="${A3}"/>`),
 
-    // Gearbox/SciPlay analytics build: nodes connected (data graph)
-    analytics: S(`
-      <circle cx="12" cy="34" r="3.5" stroke="${A}" stroke-width="2.5"/>
-      <circle cx="24" cy="14" r="3.5" stroke="${A3}" stroke-width="2.5"/>
-      <circle cx="36" cy="30" r="3.5" stroke="${A2}" stroke-width="2.5"/>
-      <path d="M14.5 31.5L21.5 17M27 16l7 11" stroke="${A}" stroke-width="2.2" stroke-linecap="round" opacity=".7"/>`),
+    // ANALYTICS (Gearbox/SciPlay): connected data nodes forming a network
+    analytics: wrap('ana', `
+      <path d="M16 44L32 18l16 22" stroke="url(#gana)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/>
+      <path d="M16 44h32" stroke="${A2}" stroke-width="3" stroke-linecap="round" opacity=".4"/>
+      <circle cx="16" cy="44" r="6" fill="${A}"/>
+      <circle cx="32" cy="18" r="6" fill="${A3}"/>
+      <circle cx="48" cy="40" r="6" fill="${A2}"/>
+      <circle cx="32" cy="18" r="2.5" fill="#0a0c12"/>`),
 
-    // Foundations (QA/security/design): magnifier over a grid (finding the cracks)
-    foundations: S(`
-      <rect x="8" y="8" width="20" height="20" rx="3" stroke="${AM}" stroke-width="2.5"/>
-      <path d="M13 14h10M13 19h10M13 24h6" stroke="${AM}" stroke-width="2" stroke-linecap="round" opacity=".7"/>
-      <circle cx="30" cy="30" r="7" stroke="${A}" stroke-width="2.5"/>
-      <path d="M35 35l5 5" stroke="${A}" stroke-width="2.5" stroke-linecap="round"/>`),
+    // QA (Sony/EA): bug under a magnifier (testing / finding defects)
+    qa: wrap('qa', `
+      <circle cx="27" cy="27" r="17" fill="url(#gqa)" opacity=".16"/>
+      <circle cx="27" cy="27" r="17" stroke="url(#gqa)" stroke-width="3.5"/>
+      <path d="M40 40l11 11" stroke="${A}" stroke-width="4.5" stroke-linecap="round"/>
+      <ellipse cx="27" cy="28" rx="5" ry="6.5" fill="${AM}"/>
+      <path d="M27 21v-4M20 24l-3-2M34 24l3-2M20 32l-3 2M34 32l3 2M27 35v3" stroke="${AM}" stroke-width="2.5" stroke-linecap="round"/>`),
+
+    // FOUNDATIONS (Zynga security + Sparkplay design): interlocking blocks / base
+    foundations: wrap('fnd', `
+      <path d="M32 6l22 11-22 11-22-11 22-11z" fill="url(#gfnd)"/>
+      <path d="M32 6l22 11-22 11-22-11 22-11z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" opacity=".4"/>
+      <path d="M10 28l22 11 22-11" stroke="${A3}" stroke-width="3.5" stroke-linejoin="round" opacity=".8"/>
+      <path d="M10 39l22 11 22-11" stroke="${A2}" stroke-width="3.5" stroke-linejoin="round" opacity=".55"/>`),
   };
 
   document.querySelectorAll('.ricon[data-icon]').forEach(el => {
