@@ -1,24 +1,24 @@
-# Chris Cleary — Portfolio
+# Chris Cleary Portfolio
 
 A modern, dependency-free portfolio site with a console-UI gaming aesthetic
 (think contemporary game launchers: frosted glass, deep gradients, smooth
-motion). Pure HTML, CSS, and vanilla JavaScript — no build step, no framework.
+motion). Pure HTML, CSS, and vanilla JavaScript, with no build step or framework.
 
 ## Pages
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Home — narrative hook, philosophy, featured work |
-| `about.html` | About — first-person career narrative + timeline |
-| `work.html` | Work — each role as problem / bet / what shipped |
-| `contact.html` | Contact — LinkedIn + location (no private contact info) |
+| `index.html` | Home: narrative hook, philosophy, featured work |
+| `about.html` | About: first-person career narrative and timeline |
+| `work.html` | Work: each role as problem, bet, and what shipped |
+| `contact.html` | Contact: LinkedIn and location (no private contact info) |
 
 Shared assets: `style.css` (design system) and `app.js` (scroll reveals,
 animated stat tracks, active-nav highlighting).
 
 ## Running locally
 
-Static site — open `index.html` in a browser, or serve the folder for
+Static site. Open `index.html` in a browser, or serve the folder for
 correct relative paths:
 
 ```bash
@@ -57,5 +57,5 @@ it while connected to see the intended typography.
 ## Editing
 
 Content lives in the HTML. The whole theme is driven by CSS variables at the
-top of `style.css` (`:root { ... }`) — change `--accent`, fonts, or spacing
+top of `style.css` (`:root { ... }`). Change `--accent`, fonts, or spacing
 there to re-skin the entire site at once.

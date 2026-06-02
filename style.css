@@ -1,5 +1,5 @@
 /* ============================================================
-   CHRIS CLEARY — Portfolio  ·  v2 "Console UI"
+   CHRIS CLEARY  ·  Portfolio  ·  v2 "Console UI"
    Modern gaming aesthetic: PS5 / Riot / Destiny console-launcher
    feel. Deep desaturated charcoal-blue base, frosted-glass panels,
    a single confident cyan->violet accent, refined grotesk type,
@@ -119,7 +119,7 @@ h1,h2,h3,h4 { font-family:var(--display); font-weight:700; line-height:1.12; let
 .btn:hover .arr { transform:translateX(3px); }
 
 /* ===== HERO ===== */
-.hero { padding-top:clamp(56px,10vw,128px); padding-bottom:clamp(40px,7vw,80px); }
+.hero { padding-top:clamp(28px,5vw,56px); padding-bottom:clamp(36px,6vw,68px); }
 .hero-grid { display:grid; grid-template-columns:1.35fr .85fr; gap:clamp(32px,5vw,64px); align-items:center; }
 @media (max-width:880px){ .hero-grid{grid-template-columns:1fr;} }
 .hero h1 { font-size:clamp(38px,7vw,76px); font-weight:800; line-height:1.03; letter-spacing:-.035em; color:#fff; margin-bottom:26px; }
@@ -238,3 +238,22 @@ h1,h2,h3,h4 { font-family:var(--display); font-weight:700; line-height:1.12; let
 .hero h1 { animation-delay:.06s; } .hero .lede { animation-delay:.16s; } .hero-cta { animation-delay:.26s; }
 .status-card { animation:rise .9s var(--ease) .28s both; }
 @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} .reveal{opacity:1; transform:none;} }
+
+/* ===== TESTIMONIALS ===== */
+.quotes { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
+@media (max-width:760px){ .quotes{grid-template-columns:1fr;} }
+.quote { padding:30px 28px; }
+.quote .mark { font-family:var(--display); font-weight:800; font-size:46px; line-height:.6; color:var(--accent); opacity:.5; margin-bottom:14px; display:block; }
+.quote p { color:var(--text); font-size:17px; line-height:1.65; font-family:var(--display); font-weight:400; letter-spacing:-.01em; }
+.quote .ctx { font-family:var(--mono); font-size:12px; color:var(--muted); margin-top:16px; letter-spacing:.5px; }
+.quote.span2 { grid-column:1 / -1; }
+.quote.span2 p { font-size:19px; }
+
+/* ===== ORIGINAL ROLE ICONS ===== */
+.ricon { display:inline-grid; place-items:center; width:100%; height:100%; }
+.ricon svg { width:60%; height:60%; }
+.work-card .glyph .ricon svg { width:58%; height:58%; }
+/* icon used inline beside case headings */
+.case h2 .ricon { display:inline-grid; width:34px; height:34px; vertical-align:-8px; margin-right:6px; border-radius:9px;
+  background:linear-gradient(150deg,rgba(255,255,255,.06),rgba(255,255,255,.02)); border:1px solid var(--line); }
+.case h2 .ricon svg { width:64%; height:64%; }
