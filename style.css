@@ -273,3 +273,6 @@ h1,h2,h3,h4 { font-family:var(--display); font-weight:700; line-height:1.12; let
 .cap-group .cap-label { font-family:var(--mono); font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); margin-bottom:12px; display:flex; align-items:center; gap:9px; }
 .cap-group .cap-label::before { content:""; width:18px; height:1px; background:var(--accent); }
 .cap-tag.ai { color:var(--accent-3); border-color:rgba(37,232,196,.35); background:rgba(37,232,196,.07); }
+
+/* core skills: emphasized, the ones every audience rewards */
+.cap-tag.core { color:var(--bg); background:linear-gradient(135deg,var(--accent),var(--accent-3)); border-color:transparent; font-weight:600; box-shadow:0 4px 14px rgba(74,214,255,.22); }
