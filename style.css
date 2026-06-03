@@ -176,7 +176,7 @@ h1,h2,h3,h4 { font-family:var(--display); font-weight:700; line-height:1.12; let
 
 /* ===== CASE STUDY ===== */
 .case { padding:36px clamp(24px,4vw,44px); }
-.case-head { display:flex; flex-wrap:wrap; justify-content:space-between; gap:14px; align-items:baseline; margin-bottom:8px; }
+.case-head { display:flex; flex-wrap:wrap; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:8px; }
 .case h2 { font-size:clamp(24px,3.8vw,34px); color:#fff; letter-spacing:-.02em; }
 .case .case-sub { font-family:var(--display); font-weight:600; font-size:clamp(16px,1.9vw,19px); color:var(--text); margin-top:6px; letter-spacing:-.01em; }
 .case .role { font-family:var(--mono); font-size:13.5px; color:var(--accent); margin-top:6px; }
@@ -276,3 +276,19 @@ h1,h2,h3,h4 { font-family:var(--display); font-weight:700; line-height:1.12; let
 
 /* core skills: emphasized, the ones every audience rewards */
 .cap-tag.core { color:var(--bg); background:linear-gradient(135deg,var(--accent),var(--accent-3)); border-color:transparent; font-weight:600; box-shadow:0 4px 14px rgba(74,214,255,.22); }
+
+/* ===== GENRES BAND ===== */
+.genres { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+@media (max-width:640px){ .genres{grid-template-columns:repeat(2,1fr);} }
+.genre { text-align:center; }
+.genre .emblem { width:100%; max-width:116px; aspect-ratio:1; margin:0 auto 12px; transition:transform .3s var(--ease); }
+.genre:hover .emblem { transform:translateY(-4px); }
+.genre .emblem svg { width:100%; height:100%; display:block; }
+.genre .g-name { font-family:var(--display); font-weight:600; font-size:15px; color:var(--text); }
+.genre .g-games { font-family:var(--mono); font-size:11.5px; color:var(--muted); margin-top:4px; line-height:1.45; }
+
+/* ===== CASE ICON TILES (match genre-band vector style) ===== */
+.case-id { display:flex; gap:16px; align-items:flex-start; }
+.case-ico { width:54px; height:54px; flex-shrink:0; border-radius:14px; background:linear-gradient(150deg,rgba(255,255,255,.05),rgba(255,255,255,.02)); border:1px solid var(--line); display:grid; place-items:center; }
+.case-ico svg { width:58%; height:58%; }
+.glyph svg { width:60%; height:60%; }
