@@ -177,8 +177,9 @@ h1,h2,h3,h4 { font-family:var(--display); font-weight:700; line-height:1.12; let
 /* ===== CASE STUDY ===== */
 .case { padding:36px clamp(24px,4vw,44px); }
 .case-head { display:flex; flex-wrap:wrap; justify-content:space-between; gap:14px; align-items:baseline; margin-bottom:8px; }
-.case h2 { font-size:clamp(24px,3.6vw,32px); color:#fff; }
-.case .role { font-family:var(--mono); font-size:14px; color:var(--accent); margin-top:4px; }
+.case h2 { font-size:clamp(24px,3.8vw,34px); color:#fff; letter-spacing:-.02em; }
+.case .case-sub { font-family:var(--display); font-weight:600; font-size:clamp(16px,1.9vw,19px); color:var(--text); margin-top:6px; letter-spacing:-.01em; }
+.case .role { font-family:var(--mono); font-size:13.5px; color:var(--accent); margin-top:6px; }
 .case .when { font-family:var(--mono); font-size:13px; color:var(--muted); }
 .case .lead { color:var(--text); font-size:18px; line-height:1.7; margin:18px 0; }
 .case .block-label { font-family:var(--mono); font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--accent-3); margin:26px 0 10px; display:flex; align-items:center; gap:9px; }
