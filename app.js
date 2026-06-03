@@ -18,22 +18,20 @@
 (function () {
   const bars = document.querySelectorAll('.track > i');
   if (!bars.length) return;
-  bars.forEach(b => {
-    const v = b.dataset.v || '0.8';
-    b.style.transform = 'scaleX(0)';
-    b.style.transition = 'transform 1.1s cubic-bezier(.22,.61,.36,1)';
-    b.dataset.target = v;
-  });
-  if (!('IntersectionObserver' in window)) { bars.forEach(b => b.style.transform = 'scaleX(' + b.dataset.target + ')'); return; }
+  const fill = (b) => { b.style.width = (Math.round((parseFloat(b.dataset.v || '0.8')) * 100)) + '%'; };
+  // Fallback: ensure bars always fill even if observer never fires
+  const fillAll = () => bars.forEach(fill);
+  if (!('IntersectionObserver' in window)) { setTimeout(fillAll, 50); return; }
   const io = new IntersectionObserver((entries) => {
     entries.forEach(e => {
-      if (e.isIntersecting) {
-        setTimeout(() => { e.target.style.transform = 'scaleX(' + e.target.dataset.target + ')'; }, 150);
-        io.unobserve(e.target);
-      }
+      if (e.isIntersecting) { setTimeout(() => fill(e.target), 120); io.unobserve(e.target); }
     });
-  }, { threshold: 0.4 });
+  }, { threshold: 0.25 });
   bars.forEach(b => io.observe(b));
+  // Safety net: if anything is still empty shortly after load, fill it
+  window.addEventListener('load', () => setTimeout(() => {
+    bars.forEach(b => { if (!b.style.width || b.style.width === '0%') fill(b); });
+  }, 1200));
 })();
 
 // active nav by filename
