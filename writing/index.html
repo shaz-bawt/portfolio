@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fifty Builds in Claude Code — A Field Report</title>
+<meta name="description" content="How I built a card-combat tactics roguelite almost entirely inside Claude Code — a fleet of AI agents, two engine-shaking pivots, and the disciplines that kept fifty builds from collapsing under their own weight.">
+<style>
+  :root{
+    --ink:#0a0c11; --ink2:#12151d; --ink3:#1a1f2b; --line:#242a38;
+    --paper:#e8e4d8; --paper-dim:#a6a290; --paper-faint:#6f6d63;
+    --teal:#5eead4; --teal-deep:#2dd4bf; --teal-glow:rgba(94,234,212,.14);
+    --amber:#f5b06a; --rose:#f2788f; --violet:#b79cff; --green:#8fdca0;
+    --font-body:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
+    --font-label:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,"Cascadia Code","SFMono-Regular",Consolas,"Liberation Mono",monospace;
+    --w-text:min(92vw,720px);
+    --w-wide:min(95vw,1040px);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--ink); color:var(--paper);
+    font-family:var(--font-body); font-size:19px; line-height:1.72;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    background-image:radial-gradient(1200px 600px at 80% -5%,rgba(94,234,212,.05),transparent 60%),
+                     radial-gradient(900px 500px at 0% 10%,rgba(183,156,255,.045),transparent 55%);
+  }
+  ::selection{background:var(--teal-glow);color:#fff}
+  a{color:var(--teal);text-decoration:none;border-bottom:1px solid rgba(94,234,212,.35)}
+  a:hover{color:#fff;border-color:#fff}
+
+  /* ---------- layout ---------- */
+  .wrap{width:var(--w-text);margin:0 auto}
+  .wide{width:var(--w-wide);position:relative;left:50%;transform:translateX(-50%);
+        margin-top:2.6rem;margin-bottom:2.6rem;max-width:100vw}
+  section{padding:0}
+  p{margin:0 0 1.25em}
+
+  /* ---------- integrated portfolio nav (visually matches the main site) ---------- */
+  .site-nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;gap:1rem;
+    padding:14px clamp(18px,5vw,56px);background:rgba(10,12,18,.72);
+    backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+    border-bottom:1px solid #1c2230;font-family:var(--font-label)}
+  .site-brand{font-weight:700;font-size:17px;color:#eef1f8;display:flex;align-items:center;gap:11px;border:0;letter-spacing:.2px}
+  .site-brand:hover{color:#fff}
+  .site-brand .site-dot{width:9px;height:9px;border-radius:50%;background:#4ad6ff;box-shadow:0 0 12px #4ad6ff;animation:sbNavPulse 2.4s ease infinite}
+  @keyframes sbNavPulse{0%,100%{box-shadow:0 0 10px #4ad6ff;opacity:1}50%{box-shadow:0 0 20px #4ad6ff;opacity:.6}}
+  .site-nav-links{display:flex;gap:clamp(4px,1.5vw,10px);align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .site-nav-links a{font-weight:500;font-size:15px;color:#a6a290;padding:8px 14px;border-radius:100px;transition:color .2s,background .2s;border:0;white-space:nowrap}
+  .site-nav-links a:hover{color:#fff;background:rgba(255,255,255,.05)}
+  .site-nav-links a.active{color:#0a0c12;background:linear-gradient(135deg,#4ad6ff,#7c5cff);font-weight:600}
+
+  /* ---------- hero ---------- */
+  .hero{position:relative;min-height:96vh;display:flex;flex-direction:column;justify-content:flex-end;
+        overflow:hidden;border-bottom:1px solid var(--line)}
+  /* live "living-painting" menu engine renders into #menu-cv; a static poster is the
+     no-JS / load-failure fallback; .scrim keeps the title legible over the bright art. */
+  .hero .bg-fallback{position:absolute;inset:0;background:#05070c center/cover no-repeat;
+        background-image:url("menu/painting.jpg");filter:saturate(1.02) brightness(.9)}
+  .hero #menu-cv{position:absolute;inset:0;display:block;opacity:0;transition:opacity 1.6s ease}
+  .hero #menu-cv.ready{opacity:1}
+  .hero .scrim{position:absolute;inset:0;pointer-events:none;
+        background:linear-gradient(180deg,rgba(4,6,10,.62) 0%,rgba(4,6,10,.10) 22%,rgba(4,6,10,0) 46%,rgba(4,6,10,.55) 78%,rgba(4,6,10,.98) 100%),
+                   linear-gradient(90deg,rgba(4,6,10,.66) 0%,rgba(4,6,10,.12) 40%,rgba(4,6,10,0) 62%)}
+  .hero .inner{z-index:3}
+  .hero .inner{position:relative;width:var(--w-wide);margin:0 auto;padding:0 0 6vh}
+  .kicker{font-family:var(--font-label);font-size:.74rem;letter-spacing:.32em;text-transform:uppercase;
+          color:var(--teal);font-weight:600;margin-bottom:1.1rem}
+  .hero h1{font-family:var(--font-body);font-weight:600;font-size:clamp(2.6rem,7.2vw,5.4rem);line-height:1.02;
+           margin:0 0 .5em;letter-spacing:-.01em;color:#fff;text-shadow:0 2px 40px rgba(0,0,0,.6)}
+  .hero h1 em{font-style:italic;color:var(--teal)}
+  .hero .dek{font-size:clamp(1.05rem,2.4vw,1.5rem);max-width:40ch;color:var(--paper);opacity:.92;line-height:1.5}
+  .hero .meta{font-family:var(--font-label);font-size:.82rem;letter-spacing:.06em;color:var(--paper-dim);
+              margin-top:2rem;display:flex;gap:1.4rem;flex-wrap:wrap;align-items:center}
+  .hero .meta b{color:var(--paper);font-weight:600}
+  .scroll-cue{font-family:var(--font-label);font-size:.7rem;letter-spacing:.28em;text-transform:uppercase;
+              color:var(--paper-faint);margin-top:2.4rem}
+
+  /* ---------- section headings ---------- */
+  .actlabel{font-family:var(--font-label);font-size:.72rem;letter-spacing:.3em;text-transform:uppercase;
+            color:var(--teal-deep);font-weight:600;margin:0 0 .6rem}
+  h2{font-family:var(--font-body);font-weight:600;font-size:clamp(1.7rem,4vw,2.5rem);line-height:1.12;
+     letter-spacing:-.01em;margin:0 0 .7em;color:#fff}
+  h3{font-family:var(--font-label);font-weight:650;font-size:1.12rem;letter-spacing:.01em;color:#fff;
+     margin:2.2em 0 .6em}
+  .lede{font-size:1.16rem;color:var(--paper);opacity:.95}
+  .dropcap::first-letter{font-size:3.4em;line-height:.8;float:left;padding:.06em .12em .0 0;
+     color:var(--teal);font-weight:600}
+  hr.rule{border:0;height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);margin:4.5rem auto;width:var(--w-text)}
+  .section-top{margin-top:5.5rem}
+
+  /* ---------- TOC ---------- */
+  .toc{border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,var(--ink2),rgba(18,21,29,.4));
+       padding:1.6rem 1.8rem;margin:3rem auto}
+  .toc h4{font-family:var(--font-label);font-size:.72rem;letter-spacing:.28em;text-transform:uppercase;color:var(--paper-dim);margin:0 0 1rem;font-weight:600}
+  .toc ol{margin:0;padding:0;list-style:none;counter-reset:t;columns:2;column-gap:2.4rem}
+  .toc li{counter-increment:t;font-family:var(--font-label);font-size:.94rem;padding:.32rem 0;break-inside:avoid}
+  .toc li::before{content:counter(t,decimal-leading-zero);color:var(--teal);font-variant-numeric:tabular-nums;margin-right:.7rem;font-size:.8rem}
+  .toc a{border:0;color:var(--paper)}
+  .toc a:hover{color:var(--teal)}
+  @media(max-width:640px){.toc ol{columns:1}}
+
+  /* ---------- figures ---------- */
+  figure{margin:2.6rem 0}
+  figure img{width:100%;height:auto;display:block;border-radius:12px;border:1px solid var(--line);
+    box-shadow:0 24px 60px -30px rgba(0,0,0,.9)}
+  figcaption{font-family:var(--font-label);font-size:.82rem;line-height:1.5;color:var(--paper-dim);margin-top:.85rem;
+    padding-left:.9rem;border-left:2px solid var(--teal)}
+  figcaption b{color:var(--paper);font-weight:600}
+  .fig-grid{display:grid;gap:1rem}
+  .fig-grid.g2{grid-template-columns:1fr 1fr}
+  .fig-grid.g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:720px){.fig-grid.g4{grid-template-columns:1fr 1fr}}
+  .cards-row{display:flex;gap:1.4rem;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+  .cards-row img{width:min(38vw,240px);border-radius:10px}
+
+  /* ---- live holographic card faces (real shimmer/holo CSS lifted from the game's CardFace) ---- */
+  .sbcards{display:flex;gap:1.8rem;justify-content:center;flex-wrap:wrap;perspective:1400px;margin:1.5rem 0 .6rem}
+  .sbcard{width:224px;height:320px;position:relative;display:flex;flex-direction:column;border-radius:13px;overflow:hidden;
+    box-sizing:border-box;color:#e6ecef;border:2px solid #d84747;font-family:var(--font-mono);
+    background:linear-gradient(170deg,#221418 0%,#0d0810 100%);box-shadow:0 6px 20px rgba(0,0,0,.55);
+    transition:transform .25s cubic-bezier(.2,.7,.2,1), box-shadow .25s ease;transform-style:preserve-3d;will-change:transform}
+  .sbcard-art{height:60%;position:relative;overflow:hidden;flex-shrink:0;border-bottom:1px solid #d8474744}
+  .sbcard-art>img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .sbcard-shimmer{position:absolute;inset:0;pointer-events:none;z-index:3;mix-blend-mode:screen}
+  .sbcard-glare{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;transition:opacity .2s;mix-blend-mode:screen;
+    background:radial-gradient(320px circle at var(--gx,50%) var(--gy,0%),rgba(255,255,255,.5),rgba(255,255,255,0) 60%)}
+  .sbcard:hover .sbcard-glare{opacity:.55}
+  .sbcard-cost{position:absolute;top:9px;left:9px;width:34px;height:34px;border-radius:50%;
+    background:rgba(8,12,20,.9);border:2px solid #ffb84d;color:#ffb84d;font-weight:bold;font-size:19px;
+    display:flex;align-items:center;justify-content:center;z-index:6;line-height:1}
+  .sbcard-info{flex:1;display:flex;flex-direction:column;padding:9px 11px 24px;background:linear-gradient(170deg,#1a1013 0%,#0a060a 100%);overflow:hidden;position:relative}
+  .sbcard-name{font-size:15px;font-weight:bold;letter-spacing:.4px;line-height:1.15;color:#e6ecef}
+  .sbcard-pill{display:inline-block;margin-top:5px;font-size:9px;letter-spacing:1.5px;font-weight:bold;padding:1px 8px;border-radius:3px}
+  .sbcard-rules{font-size:11.5px;line-height:1.5;color:#c8d3e0;margin-top:8px}
+  .sbcard-rules .dmg{color:#ff6b5e;font-size:1.12em;font-weight:bold}
+  .sbcard-rules .good{color:#5fd4c4;font-size:1.12em;font-weight:bold}
+  .sbcard-rules .kw{padding:0 3px;border-radius:2px;font-weight:bold;font-size:.9em;border:1px solid}
+  .sbcard-foot{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:8.5px;letter-spacing:2.5px;opacity:.9}
+  /* type: movement (blue) override */
+  .sbcard--move{background:linear-gradient(170deg,#131c2a 0%,#08101e 100%)}
+  .sbcard--move .sbcard-art{border-bottom-color:#5fb0ff44}
+  .sbcard--move .sbcard-info{background:linear-gradient(170deg,#0f1822 0%,#060d18 100%)}
+  /* rarity chrome (RARITY map from the game) */
+  .sbcard--uncommon{border-color:#3fcf6e;box-shadow:0 0 12px rgba(63,207,110,.4)}
+  .sbcard--rare{border-color:transparent;box-shadow:0 0 18px rgba(95,176,255,.5)}
+  .sbcard--holo{border-color:#c792ea;box-shadow:0 0 18px rgba(199,146,234,.55);animation:sbHoloBorder 2s linear infinite}
+  /* the game's exact shimmer + holo keyframes */
+  @keyframes sbShimmerUncommon{0%{background-position:-200% 0}100%{background-position:200% 0}}
+  @keyframes sbShimmerRare{0%{background-position:-200% 0}100%{background-position:200% 0}}
+  @keyframes sbShimmerHolo{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+  @keyframes sbHoloBorder{0%{border-color:#ff0080}16%{border-color:#ff8000}33%{border-color:#ffff00}50%{border-color:#00ff80}66%{border-color:#0080ff}83%{border-color:#8000ff}100%{border-color:#ff0080}}
+  .sb-shim-uncommon{background:linear-gradient(105deg,transparent 40%,rgba(200,220,200,.20) 50%,transparent 60%);background-size:200% 100%;animation:sbShimmerUncommon 3.2s linear infinite}
+  .sb-shim-rare{background:linear-gradient(105deg,transparent 35%,rgba(180,210,255,.30) 50%,transparent 65%);background-size:200% 100%;animation:sbShimmerRare 2.4s linear infinite}
+  .sb-shim-holo{background:linear-gradient(135deg,rgba(255,0,128,.20) 0%,rgba(255,128,0,.20) 15%,rgba(255,255,0,.20) 30%,rgba(0,255,128,.20) 45%,rgba(0,128,255,.20) 60%,rgba(128,0,255,.20) 75%,rgba(255,0,128,.20) 100%);background-size:300% 300%;animation:sbShimmerHolo 3s ease infinite}
+  .sbcard-cap{text-align:center;font-family:var(--font-label);font-size:.82rem;color:var(--paper-dim);margin:.4rem auto 0;max-width:60ch}
+  @media(prefers-reduced-motion:reduce){.sbcard,.sbcard *{animation:none!important}}
+
+  .diagram{background:linear-gradient(180deg,#0c0f16,#0a0c11);border:1px solid var(--line);border-radius:14px;
+    padding:1.6rem 1.4rem .9rem;margin:2.6rem 0}
+  .diagram svg{width:100%;height:auto;display:block}
+  .diagram .dcap{font-family:var(--font-label);font-size:.8rem;color:var(--paper-dim);margin:.9rem .3rem 0;
+    text-align:center;letter-spacing:.02em}
+
+  /* ---------- callouts ---------- */
+  .callout{border-radius:12px;padding:1.3rem 1.5rem;margin:2.4rem 0;background:var(--ink2);
+    border:1px solid var(--line);border-left:3px solid var(--teal);font-size:1rem;line-height:1.62}
+  .callout .tag{font-family:var(--font-label);font-size:.68rem;letter-spacing:.24em;text-transform:uppercase;
+    font-weight:700;color:var(--teal);display:block;margin-bottom:.5rem}
+  .callout.lesson{border-left-color:var(--amber)} .callout.lesson .tag{color:var(--amber)}
+  .callout.broke{border-left-color:var(--rose)} .callout.broke .tag{color:var(--rose)}
+  .callout.pivot{border-left-color:var(--violet)} .callout.pivot .tag{color:var(--violet)}
+  .callout p:last-child{margin-bottom:0}
+  .callout strong{color:#fff}
+
+  blockquote{margin:2.6rem 0;padding:.2rem 0 .2rem 1.6rem;border-left:3px solid var(--teal);
+    font-style:italic;font-size:1.34rem;line-height:1.5;color:#fff}
+  blockquote cite{display:block;font-style:normal;font-family:var(--font-label);font-size:.82rem;
+    letter-spacing:.04em;color:var(--paper-dim);margin-top:.9rem}
+  blockquote cite::before{content:"— "}
+
+  code{font-family:var(--font-mono);font-size:.86em;background:rgba(94,234,212,.09);color:var(--teal);
+    padding:.1em .4em;border-radius:5px}
+  pre{font-family:var(--font-mono);font-size:.82rem;line-height:1.6;background:#0c0f16;border:1px solid var(--line);
+    border-radius:10px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1.8rem 0;color:var(--paper)}
+  pre .cm{color:var(--paper-faint)} pre .ok{color:var(--green)} pre .bad{color:var(--rose)} pre .hl{color:var(--amber)}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;margin:2.4rem 0}
+  @media(max-width:680px){.twocol{grid-template-columns:1fr}}
+  .panel{border:1px solid var(--line);border-radius:12px;padding:1.2rem 1.35rem;background:var(--ink2)}
+  .panel h5{font-family:var(--font-label);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;margin:0 0 .7rem;font-weight:700}
+  .panel.win h5{color:var(--green)} .panel.fail h5{color:var(--rose)}
+  .panel ul{margin:0;padding-left:1.1rem;font-size:.96rem;line-height:1.55}
+  .panel li{margin:.42rem 0}
+
+  /* screenshot placeholder */
+  .shot{border:1.5px dashed #33405a;border-radius:12px;padding:2.4rem 1.4rem;text-align:center;margin:2.6rem 0;
+    background:repeating-linear-gradient(45deg,rgba(255,255,255,.012) 0 10px,transparent 10px 20px)}
+  .shot .lbl{font-family:var(--font-label);font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;color:var(--teal-deep);font-weight:700}
+  .shot .desc{font-family:var(--font-label);font-size:.9rem;color:var(--paper-dim);margin-top:.6rem;max-width:46ch;margin-left:auto;margin-right:auto}
+
+  /* stat strip */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:2.6rem 0}
+  .stats div{background:var(--ink2);padding:1.2rem 1rem;text-align:center}
+  .stats .n{font-family:var(--font-body);font-size:2rem;color:var(--teal);font-weight:600;line-height:1}
+  .stats .l{font-family:var(--font-label);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-dim);margin-top:.5rem}
+  @media(max-width:640px){.stats{grid-template-columns:1fr 1fr}}
+
+  footer{border-top:1px solid var(--line);margin-top:6rem;padding:3rem 0 5rem}
+  footer .wrap{color:var(--paper-dim);font-family:var(--font-label);font-size:.86rem;line-height:1.7}
+  .tick{color:var(--teal)}
+  em.q{color:var(--paper);font-style:italic}
+</style>
+</head>
+<body>
+
+<!-- ============================ SITE NAV (integrated with the portfolio) ============================ -->
+<nav class="site-nav">
+  <a class="site-brand" href="../index.html"><span class="site-dot"></span> Chris Cleary</a>
+  <div class="site-nav-links">
+    <a href="../index.html">Home</a>
+    <a href="../about.html">About</a>
+    <a href="../work.html">Work</a>
+    <a href="index.html" class="active">Writing</a>
+    <a href="../contact.html">Contact</a>
+  </div>
+</nav>
+
+<!-- ============================ HERO ============================ -->
+<header class="hero">
+  <div class="bg-fallback" aria-hidden="true"></div>
+  <canvas id="menu-cv" aria-hidden="true"></canvas>
+  <div class="scrim" aria-hidden="true"></div>
+  <div class="inner">
+    <div class="kicker">A field report · working inside Claude Code</div>
+    <h1>Fifty Builds in<br><em>Claude Code</em></h1>
+    <p class="dek">One director, a fleet of AI agents, and a card-combat tactics roguelite that rebuilt its own engine twice. What worked, what broke, and how the workflow kept reinventing itself.</p>
+    <div class="meta">
+      <span><b>Stratum-Break</b> — turn-based card + grid tactics</span>
+      <span>v0.0.1 → v0.0.50e</span>
+      <span>~3 weeks · June 2026</span>
+    </div>
+    <div class="scroll-cue">Scroll ↓</div>
+  </div>
+</header>
+
+<!-- ============================ INTRO ============================ -->
+<section class="wrap section-top">
+  <p class="lede dropcap">I did something slightly unhinged this month. I built a game — a real one, an isometric card-combat tactics roguelite with a story campaign, hundreds of cards, animated sprites, bosses, and a shippable Windows <code>.exe</code> — almost entirely inside Claude Code. Not "Claude helped me write some functions." I mean the model wrote the engine, tuned the balance in a simulator it also wrote, generated the art through a pipeline it operated, playtested against logs I fed back to it, and cut fifty numbered builds — while I did the one thing it couldn't: decide, over and over, exactly what we were building.</p>
+
+  <p>This is the field report I wish I'd had at the start. It's not a tutorial and it's not a victory lap — it's the honest shape of what a three-week, fifty-build run with an AI agent actually looks like: the workflow that emerged, the four times it reinvented itself, the disciplines that kept it from collapsing, and the bugs that taught me which of my tools were quietly lying to me.</p>
+
+  <p>If you're a game developer wondering how to <em>actually</em> work inside a tool like this — not toy prompts, but a real project with locked design values and a build pipeline and the constant risk of an over-eager model helpfully rewriting your combat math — this is for you.</p>
+
+  <p>And if there's one idea I'd put ahead of every tactic that follows, it's this: <strong>the model will build whatever you can clearly specify — so the real skill is knowing, precisely, what to ask for.</strong> Twenty years of making games is most of what taught me to do that, and it's the reason this stayed a game instead of drifting into a tidy web app with combat bolted on. I get into why that matters more than any trick in here right after the setup.</p>
+
+  <div class="stats">
+    <div><div class="n">50</div><div class="l">numbered builds</div></div>
+    <div><div class="n">8</div><div class="l">eras / 2 pivots</div></div>
+    <div><div class="n">~13</div><div class="l">parallel agents (peak)</div></div>
+    <div><div class="n">85+</div><div class="l">memory files on disk</div></div>
+  </div>
+
+  <div class="toc" aria-label="Table of contents">
+    <h4>The report</h4>
+    <ol>
+      <li><a href="#what">What I was building</a></li>
+      <li><a href="#pillars">Knowing what to ask for</a></li>
+      <li><a href="#one">One session, and its ceiling</a></li>
+      <li><a href="#fleet">The fleet</a></li>
+      <li><a href="#disciplines">The disciplines that emerged</a></li>
+      <li><a href="#bugs">The bugs that taught me</a></li>
+      <li><a href="#teardown">Tearing the fleet down</a></li>
+      <li><a href="#pivot">The pivot</a></li>
+      <li><a href="#art">Making the art nearly broke me</a></li>
+      <li><a href="#merger">Merger, not router</a></li>
+      <li><a href="#timeline">Fifty builds, compressed</a></li>
+      <li><a href="#ledger">By the numbers</a></li>
+      <li><a href="#takeaways">What I'd tell you</a></li>
+    </ol>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ 1. WHAT ============================ -->
+<section class="wrap" id="what">
+  <p class="actlabel">01 · The subject</p>
+  <h2>What I was building</h2>
+  <p>Stratum-Break is a fantasy, Baldur's-Gate-flavored, class-based turn-based game where <strong>every action is a card</strong> and the battlefield is an isometric grid with real terrain — surfaces that catch fire and spread, elevation, hazards. It ships as one Windows executable: a Phaser&nbsp;4 game running inside a WebView2 shell. There are two modes sharing one engine — a story campaign and a Slay-the-Spire-style roguelike run — plus a party of recruitable heroes, four distinct classes, and a card library deep enough that "which cards are even legal to change" became a governance problem.</p>
+
+  <figure class="wide">
+    <img src="images/hub-city.jpg" alt="A painterly render of a ruined, neon-lit city sprawl under a fractured sky.">
+    <figcaption>The world at a glance — a ruined, neon-drowned sprawl under a fractured sky. The <em>actual</em> front door is the <b>animated living painting</b> at the top of this page; getting there took a pivot that tore out a whole menu-hub layer.</figcaption>
+  </figure>
+
+  <p>The reason any of this matters for a "working in Claude Code" write-up is that Stratum-Break is exactly the kind of project that punishes a naïve prompt-and-pray loop. It has <em>invariants</em> — numbers I tuned that the model must never "improve." It has a build that behaves differently in the shipped <code>.exe</code> than in the dev server. It has art that costs GPU-minutes to regenerate. And it's big enough that no single context window can hold it. Every lesson in this piece is a scar I picked up from one of those four facts.</p>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ 1.5 KNOWING WHAT TO ASK FOR ============================ -->
+<section class="wrap" id="pillars">
+  <p class="actlabel">Before build one · the part no model brings</p>
+  <h2>Knowing what to ask for</h2>
+  <p class="lede">I've spent about twenty years in and around games — tester, designer, security lead, analyst, product lead. I'm not saying that to pad a résumé. I'm saying it because it was the load-bearing beam of this whole experiment: I don't think it worked <em>despite</em> being mostly built by an AI, I think it worked because I could say — precisely, and over and over — what I actually wanted.</p>
+
+  <p>Here's the thing a slick demo never shows you. An AI will build, fast and genuinely well, exactly what you can specify — and in every gap you leave, it fills the space with the <em>generic</em>. It has no taste for <em>your</em> product. It doesn't know what's fun. Point it at a problem and it writes clean, correct, reasonable software — and "clean, correct, reasonable" is not the same thing as "a game."</p>
+
+  <p>That gap was a live threat the entire time, because this game is built in web technology — a Phaser canvas inside a browser shell. The gravity of the stack pulls constantly toward <strong>a competent web application that happens to have combat in it</strong>: menus that behave like forms, a fight that resolves like a database transaction, screens that are technically correct and completely dead. Nobody sits down and decides to build that. You <em>drift</em> into it, one reasonable-looking commit at a time.</p>
+
+  <p>So my real job across fifty builds — more than any prompt I wrote — was to keep answering the two questions the model simply cannot answer for you: <em>Is this fun?</em> and <em>Does this serve the pillar?</em> A card-combat game lives or dies on feel — the weight of a hit landing, the readability of the board at a glance, the tension of a run you might actually lose. None of that shows up in a spec unless you put it there and then defend it, because none of it makes a build "pass." I kept a short list of non-negotiables — dynamic terrain is core, no dead cards, readability over spectacle, difficulty that's <em>tuned</em> and not merely present — and every time a build wandered, I could point at the exact pillar it broke and name the fix. Without that list written down, "better" has no definition; and an AI handed no definition of better will quietly optimize for <em>done</em>.</p>
+
+  <div class="callout pivot">
+    <span class="tag">If you take one thing from this whole piece</span>
+    <p>The biggest predictor of whether you get what you <em>wanted</em> out of a tool like this isn't prompt-craft, and it isn't which model you run. It's whether you can state your product, your design pillars, and your requirements clearly enough to defend them under pressure. If you can't, you'll stray from your idea fast — or, worse, drift from it slowly, because slow drift you don't notice until you're a month and a hundred commits away from the game you meant to make. The model removes the <em>labor</em> of building. It does not remove — and it quietly raises the premium on — the <em>judgment</em> of knowing what to build.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ 2. ONE SESSION ============================ -->
+<section class="wrap" id="one">
+  <p class="actlabel">02 · Phase one</p>
+  <h2>One session, and its ceiling</h2>
+  <p class="lede">The first nine builds were ordinary. One Claude Code session, one human, a normal back-and-forth. We stood up the whole skeleton this way — the isometric renderer, the card engine, the initiative queue, enemy AI, pathfinding, sixty-odd cards, a dozen status effects, three missions.</p>
+
+  <p>It worked, and it hit a wall that anyone doing serious solo work in an agent will recognize. Two walls, actually, and they're the reason everything after this section exists.</p>
+
+  <p><strong>A single session is a serial bottleneck.</strong> While the model regenerates a batch of art, it isn't fixing the combat bug. While it's deep in the combat bug, the card library sits untouched. For a hobby script that's fine. For something with an art lane, an engine lane, a content lane, and a QA lane all wanting attention at once, one session means three of the four are always idle.</p>
+
+  <p><strong>And a session's context window is a single point of failure.</strong> A token outage, an app restart, a context that grows too long and gets compacted — any of these can drop the thread. Early on that felt survivable. It stopped feeling survivable the moment the project got big enough that "re-explain the whole codebase" cost more than the actual work.</p>
+
+  <div class="callout lesson">
+    <span class="tag">The lesson under everything</span>
+    <p>Both problems have the same answer, and it's the single most important thing I learned: <strong>put the operating model on disk, not in a session.</strong> Runbooks, a live status file, a coordination board, a decisions ledger, and cross-session memory. If the entire state of "how we work and where we are" lives in files in the repo, then any fresh session — after any crash, restart, or machine swap — reconstructs it by reading. The conversation becomes disposable. That realization is what made everything else possible.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ 3. THE FLEET ============================ -->
+<section class="wrap" id="fleet">
+  <p class="actlabel">03 · Phase two — peak orchestration</p>
+  <h2>The fleet</h2>
+  <p class="lede">So I stopped running one session and started running a fleet. Multiple concurrent Claude Code sessions, each a fixed identity working one lane, coordinating entirely through files in the repo. At its peak there were around thirteen of them.</p>
+
+  <p>The mechanics are worth spelling out because they transfer to any multi-agent setup, not just this one.</p>
+
+  <h3>One repo, many worktrees</h3>
+  <p>Git worktrees are the load-bearing trick. Each stream that needed isolation got its own checkout —<br><code>git worktree add .claude/worktrees/&lt;name&gt; -b claude/&lt;name&gt;</code> — an independent working tree on its own branch that merges back to master every iteration. The streams committing directly to master (the engine lane, the content lane, and the governor) worked in the main repo; everyone else lived in a worktree. No two agents ever fought over the same files on disk.</p>
+
+  <div class="diagram">
+    <!-- FLEET ARCHITECTURE DIAGRAM -->
+    <svg viewBox="0 0 960 470" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif,system-ui,sans-serif">
+      <defs>
+        <marker id="arw" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+          <path d="M0,0 L9,4.5 L0,9 Z" fill="#5eead4"/>
+        </marker>
+        <marker id="arw2" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+          <path d="M0,0 L9,4.5 L0,9 Z" fill="#6f6d63"/>
+        </marker>
+      </defs>
+      <!-- MC -->
+      <rect x="360" y="18" width="240" height="66" rx="10" fill="#12151d" stroke="#b79cff" stroke-width="1.5"/>
+      <text x="480" y="46" fill="#b79cff" font-size="15" font-weight="700" text-anchor="middle">MASTER CONTROL</text>
+      <text x="480" y="66" fill="#a6a290" font-size="11.5" text-anchor="middle">one session · the governor</text>
+
+      <!-- streams -->
+      <g font-size="12.5" font-weight="600" text-anchor="middle">
+        <rect x="40"  y="150" width="150" height="58" rx="9" fill="#12151d" stroke="#5eead4"/>
+        <text x="115" y="175" fill="#e8e4d8">FORGE</text><text x="115" y="194" fill="#6f6d63" font-size="10.5" font-weight="400">engine · combat</text>
+        <rect x="215" y="150" width="150" height="58" rx="9" fill="#12151d" stroke="#5eead4"/>
+        <text x="290" y="175" fill="#e8e4d8">GAME</text><text x="290" y="194" fill="#6f6d63" font-size="10.5" font-weight="400">campaign · content</text>
+        <rect x="405" y="150" width="150" height="58" rx="9" fill="#12151d" stroke="#5eead4"/>
+        <text x="480" y="175" fill="#e8e4d8">UI</text><text x="480" y="194" fill="#6f6d63" font-size="10.5" font-weight="400">DOM overlay</text>
+        <rect x="595" y="150" width="150" height="58" rx="9" fill="#12151d" stroke="#5eead4"/>
+        <text x="670" y="175" fill="#e8e4d8">QA</text><text x="670" y="194" fill="#6f6d63" font-size="10.5" font-weight="400">playtest · never fixes</text>
+        <rect x="770" y="150" width="150" height="58" rx="9" fill="#12151d" stroke="#f5b06a" stroke-dasharray="4 3"/>
+        <text x="845" y="172" fill="#f5b06a">ART · SFX</text><text x="845" y="191" fill="#6f6d63" font-size="10.5" font-weight="400">idle unless queued</text>
+      </g>
+
+      <!-- MC to streams (governance) -->
+      <g stroke="#6f6d63" stroke-width="1.2" fill="none" opacity=".7">
+        <path d="M430,84 C300,110 160,120 115,150" marker-end="url(#arw2)"/>
+        <path d="M455,84 C380,115 300,125 290,150" marker-end="url(#arw2)"/>
+        <path d="M485,84 L481,150" marker-end="url(#arw2)"/>
+        <path d="M520,84 C600,115 660,125 670,150" marker-end="url(#arw2)"/>
+        <path d="M545,84 C700,110 810,120 845,150" marker-end="url(#arw2)"/>
+      </g>
+
+      <!-- worktrees layer -->
+      <g text-anchor="middle" font-size="10.5">
+        <rect x="40"  y="255" width="150" height="40" rx="7" fill="#0c0f16" stroke="#242a38"/>
+        <text x="115" y="280" fill="#a6a290" font-family="ui-monospace,monospace" font-size="10">worktree/forge</text>
+        <rect x="215" y="255" width="150" height="40" rx="7" fill="#0c0f16" stroke="#242a38"/>
+        <text x="290" y="280" fill="#a6a290" font-family="ui-monospace,monospace" font-size="10">main repo</text>
+        <rect x="405" y="255" width="150" height="40" rx="7" fill="#0c0f16" stroke="#242a38"/>
+        <text x="480" y="280" fill="#a6a290" font-family="ui-monospace,monospace" font-size="10">worktree/ui</text>
+        <rect x="595" y="255" width="150" height="40" rx="7" fill="#0c0f16" stroke="#242a38"/>
+        <text x="670" y="280" fill="#a6a290" font-family="ui-monospace,monospace" font-size="10">worktree/qa</text>
+        <rect x="770" y="255" width="150" height="40" rx="7" fill="#0c0f16" stroke="#242a38"/>
+        <text x="845" y="280" fill="#a6a290" font-family="ui-monospace,monospace" font-size="10">worktree/art</text>
+      </g>
+      <g stroke="#242a38" stroke-width="1"><path d="M115,208 L115,255"/><path d="M290,208 L290,255"/><path d="M480,208 L480,255"/><path d="M670,208 L670,255"/><path d="M845,208 L845,255"/></g>
+
+      <!-- master line -->
+      <rect x="40" y="360" width="880" height="52" rx="10" fill="#12151d" stroke="#5eead4" stroke-width="1.5"/>
+      <text x="480" y="384" fill="#5eead4" font-size="14" font-weight="700" text-anchor="middle">master — the one canonical line</text>
+      <text x="480" y="402" fill="#a6a290" font-size="11" text-anchor="middle">verified work merges in every iteration · "a branch is not a shelf"</text>
+      <g stroke="#5eead4" stroke-width="1.3" fill="none" opacity=".85">
+        <path d="M115,295 L115,360" marker-end="url(#arw)"/>
+        <path d="M290,295 L290,360" marker-end="url(#arw)"/>
+        <path d="M480,295 L480,360" marker-end="url(#arw)"/>
+        <path d="M670,295 L670,360" marker-end="url(#arw)"/>
+        <path d="M845,295 L845,360" marker-end="url(#arw)"/>
+      </g>
+      <text x="700" y="343" fill="#6f6d63" font-size="10" text-anchor="middle" font-style="italic">merge cadence ↑</text>
+      <text x="255" y="133" fill="#6f6d63" font-size="10" text-anchor="middle" font-style="italic">governance (files) ↓</text>
+    </svg>
+    <div class="dcap">The fleet at peak. Governance flowed down through files; verified code flowed up to one master line every iteration.</div>
+  </div>
+
+  <h3>Coordination was one hundred percent files</h3>
+  <p>No chat backchannel, no shared account state, nothing that would evaporate on a restart. A protocol file was "the law" — topology, the rules, the exact formats for a cross-stream request or an escalation. A coordination board carried the running conversation between agents: <code>TO&nbsp;FORGE: the card-face band is hard-coded to 236px, can you widen it? (blocking me)</code>. A decisions ledger recorded every autonomous call the governor made, git-reversible. It reads like a ship's log because that's exactly what it is.</p>
+
+  <p>The constitution was seven rules, and if you take nothing else structural from this report, take these:</p>
+
+  <div class="twocol">
+    <div class="panel win">
+      <h5>The seven rules</h5>
+      <ul>
+        <li><b>Update gate</b> — every wake starts with "anything new for my lane since my last commit?" Nothing? Exit near-free.</li>
+        <li><b>Cadence</b> — active work wakes every ~10 min, does 1–2 items, exits. A wait is an <em>exit</em>, never a busy-poll.</li>
+        <li><b>Build banking</b> — only bump the version when a player-visible slice has accumulated <em>and</em> merged.</li>
+        <li><b>Model discipline</b> — delegate mechanical bulk to cheaper sub-models; keep the main loop for judgment.</li>
+      </ul>
+    </div>
+    <div class="panel win">
+      <h5>…continued</h5>
+      <ul>
+        <li><b>Commit hygiene</b> — one commit per item, stage only your own files, and <em>re-read shared files immediately before every edit</em> because someone landed work under you.</li>
+        <li><b>Two-strikes</b> — fail the same thing twice, stop, leave the tree clean, file an escalation. Don't grind.</li>
+        <li><b>Merge cadence</b> — verified work merges the same iteration. <em>A branch is not a shelf.</em></li>
+      </ul>
+    </div>
+  </div>
+
+  <p>Rule five saved me more times than any other. When several agents are landing commits minutes apart, the file you read at the top of your turn is stale by the time you go to edit it. "Re-read immediately before editing" sounds obvious written down; it is the difference between a clean merge and silently clobbering another stream's work.</p>
+
+  <h3>Test isolation as a hard mandate</h3>
+  <p>Every stream tested on its <em>own</em> server port and its own browser origin. This prevented an entire class of ghost bug: a worktree serving on one port while the preview tab points at master's port, so your unmerged work is simply invisible and you "fix" a bug that was never broken. The rule became a reflex — <em>check your URL first, every single time.</em></p>
+
+  <div class="callout">
+    <span class="tag">The governor · "Master Control"</span>
+    <p>One persistent session sat above the fleet as the governor. Its job wasn't to write features — it was cross-stream judgment: enforce the invariants, do the path-scoped commits on contended files, bank a build when a slice was ready, and resolve conferrals by <strong>quoting the relevant rule verbatim before ruling</strong>. There was exactly one, ever — after an early incident where two governors briefly ran at once and started forking decisions, "check whether another governor is alive before you arm" became step zero of its cold-start. If two streams touched the same system incompatibly and it needed real judgment, the rule was blunt: <strong>flag me and stop.</strong> Never resolve a genuine semantic merge conflict by model inference alone.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ 4. DISCIPLINES ============================ -->
+<section class="wrap" id="disciplines">
+  <p class="actlabel">04 · What worked</p>
+  <h2>The disciplines that emerged</h2>
+  <p class="lede">A fleet of eager agents will cheerfully destroy your game if you let it. These are the practices that kept fifty builds coherent — each one earned, most of them the hard way.</p>
+
+  <h3>Value-lock: the numbers are law</h3>
+  <p>This is the single most important guardrail I put on the whole project, and I learned to need it fast. I tuned the card values by hand, and the model must <strong>never</strong> touch them — not to "fix" a bug, not to "balance" a class, not ever, without my explicit sign-off. Left to its instincts, a helpful model asked to fix a targeting bug will occasionally nudge a damage number because that also makes the symptom go away. In a game where the balance <em>is</em> the product, that's catastrophic — and it took me exactly one silent nudge to decide it could never happen again.</p>
+
+  <p>The enforcement I settled on is almost stupidly simple, which is exactly why it works. Before any build, a diff of the locked files against a ratified baseline has to come back <em>empty</em> — no exceptions:</p>
+
+<pre><span class="cm"># value-guard — must print NOTHING</span>
+git diff 725f45c4 HEAD -- \
+  src/data/cards.js \
+  src/systems/CardEngine.js \
+  src/roguelike/data/
+
+<span class="ok">$ (no output)  → safe to build</span>
+<span class="bad">$ +  damage: 7,   → STOP. a value moved. do not ship.</span></pre>
+
+  <div class="diagram">
+    <!-- VALUE LOCK DIAGRAM -->
+    <svg viewBox="0 0 900 210" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif,system-ui,sans-serif">
+      <rect x="30" y="60" width="180" height="90" rx="10" fill="#12151d" stroke="#5eead4"/>
+      <text x="120" y="92" fill="#5eead4" font-size="13" font-weight="700" text-anchor="middle">BASELINE</text>
+      <text x="120" y="114" fill="#a6a290" font-size="11" text-anchor="middle" font-family="ui-monospace,monospace">725f45c4</text>
+      <text x="120" y="132" fill="#6f6d63" font-size="10" text-anchor="middle">ratified values</text>
+
+      <rect x="360" y="60" width="180" height="90" rx="10" fill="#12151d" stroke="#5eead4"/>
+      <text x="450" y="92" fill="#5eead4" font-size="13" font-weight="700" text-anchor="middle">HEAD</text>
+      <text x="450" y="114" fill="#a6a290" font-size="11" text-anchor="middle" font-family="ui-monospace,monospace">this build</text>
+      <text x="450" y="132" fill="#6f6d63" font-size="10" text-anchor="middle">locked files</text>
+
+      <path d="M215,105 L355,105" stroke="#6f6d63" stroke-width="1.4" fill="none" stroke-dasharray="5 4"/>
+      <text x="285" y="96" fill="#a6a290" font-size="11" text-anchor="middle" font-family="ui-monospace,monospace">git diff</text>
+
+      <path d="M545,105 L640,105" stroke="#5eead4" stroke-width="1.4" fill="none" marker-end="url(#arw)"/>
+      <defs><marker id="arw" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#5eead4"/></marker></defs>
+
+      <rect x="645" y="30" width="225" height="66" rx="10" fill="#0c0f16" stroke="#8fdca0"/>
+      <text x="757" y="58" fill="#8fdca0" font-size="13" font-weight="700" text-anchor="middle">empty → BUILD</text>
+      <text x="757" y="78" fill="#6f6d63" font-size="10.5" text-anchor="middle">values untouched</text>
+
+      <rect x="645" y="114" width="225" height="66" rx="10" fill="#0c0f16" stroke="#f2788f"/>
+      <text x="757" y="142" fill="#f2788f" font-size="13" font-weight="700" text-anchor="middle">non-empty → STOP</text>
+      <text x="757" y="162" fill="#6f6d63" font-size="10.5" text-anchor="middle">a number moved</text>
+    </svg>
+    <div class="dcap">Value-lock is one <code>git diff</code>. The subtle failure: for several builds the guard omitted one engine file, and legitimate-looking edits slipped past. <b>The guard must cover every locked file, or it isn't a guard.</b></div>
+  </div>
+
+  <h3>Fix the core, not band-aids</h3>
+  <p>An audit of the card engine surfaced hundreds of flagged cards. The tempting response — the response a model reaches for by default — is to patch each one. My standing directive, which became a memory the model reloads every session, was the opposite:</p>
+
+  <blockquote>Reject symptom-masks. Fix the root cause, and write a validator that enumerates the complete defect set.<cite>a directive that became project law</cite></blockquote>
+
+  <p>So instead of whack-a-mole, the model built a validator that clustered 871 flagged cards down to a handful of <em>systemic</em> engine faults — a target-validation bug, a status-ordering bug, a splash-resolution bug — fixed those, and watched the flag count fall to 561 as a <em>consequence</em>. That's the whole philosophy: when an AI hands you a hundred symptoms, make it find the dozen causes.</p>
+
+  <h3>The tightest feedback loop I could build</h3>
+  <p>The most productive channel on the entire project was almost embarrassingly low-tech. Every playtest build writes a debug session log to disk as I play. Claude reads the newest log <em>directly off the filesystem</em> — no copy-pasting, no screenshots to describe — including render diagnostics snapshots the game emits into it. A triage script sorts the faults from the noise. I play, it reads, it fixes, I play again.</p>
+
+  <blockquote>Don't theorize — read the log.<cite>the rule that replaced a hundred guesses</cite></blockquote>
+
+  <p>The counterpart to reading real logs is verifying through the <em>real</em> input path. A combat "test" that zeroes an enemy's HP directly is a false positive — it proves nothing about whether a click actually lands a hit. A synthetic mouse event injected below the app is a false negative — it can miss a real, working interaction. The only faithful gate is a real DOM click driving real engine damage, both directions. I burned a day early on to a "bug" that was actually my test lying to me before that rule crystallized.</p>
+
+  <h3>Adversarial verification before shipping</h3>
+  <p>The practice I'd most recommend to anyone doing serious work with agents: before you trust a fix, spend a few more agents trying to <em>refute</em> it. Not review it — refute it, actively, from independent angles.</p>
+
+  <div class="diagram">
+    <!-- ADVERSARIAL VERIFY LOOP -->
+    <svg viewBox="0 0 900 260" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif,system-ui,sans-serif">
+      <defs><marker id="a3" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#f5b06a"/></marker>
+      <marker id="a3g" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#8fdca0"/></marker>
+      <marker id="a3r" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#f2788f"/></marker></defs>
+
+      <rect x="30" y="100" width="150" height="60" rx="10" fill="#12151d" stroke="#5eead4"/>
+      <text x="105" y="128" fill="#e8e4d8" font-size="13" font-weight="700" text-anchor="middle">"fixed" bug</text>
+      <text x="105" y="147" fill="#6f6d63" font-size="10.5" text-anchor="middle">candidate to ship</text>
+
+      <g font-size="11" text-anchor="middle">
+        <rect x="300" y="20" width="200" height="48" rx="9" fill="#0c0f16" stroke="#f5b06a"/>
+        <text x="400" y="41" fill="#f5b06a" font-weight="600">skeptic · correctness</text><text x="400" y="57" fill="#6f6d63" font-size="10">try to break it</text>
+        <rect x="300" y="106" width="200" height="48" rx="9" fill="#0c0f16" stroke="#f5b06a"/>
+        <text x="400" y="127" fill="#f5b06a" font-weight="600">skeptic · cross-scene</text><text x="400" y="143" fill="#6f6d63" font-size="10">does it hold elsewhere?</text>
+        <rect x="300" y="192" width="200" height="48" rx="9" fill="#0c0f16" stroke="#f5b06a"/>
+        <text x="400" y="213" fill="#f5b06a" font-weight="600">skeptic · value-guard</text><text x="400" y="229" fill="#6f6d63" font-size="10">did a number move?</text>
+      </g>
+      <g stroke="#f5b06a" stroke-width="1.3" fill="none">
+        <path d="M180,120 C240,90 260,60 300,46" marker-end="url(#a3)"/>
+        <path d="M180,130 L300,130" marker-end="url(#a3)"/>
+        <path d="M180,140 C240,170 260,200 300,214" marker-end="url(#a3)"/>
+      </g>
+
+      <path d="M500,130 L600,130" stroke="#a6a290" stroke-width="1.3" fill="none"/>
+      <rect x="600" y="104" width="120" height="52" rx="10" fill="#12151d" stroke="#a6a290"/>
+      <text x="660" y="128" fill="#e8e4d8" font-size="12" font-weight="700" text-anchor="middle">tally votes</text>
+      <text x="660" y="145" fill="#6f6d63" font-size="10" text-anchor="middle">majority rules</text>
+
+      <path d="M720,120 C760,100 780,80 810,66" stroke="#8fdca0" stroke-width="1.3" fill="none" marker-end="url(#a3g)"/>
+      <path d="M720,140 C760,170 780,200 810,214" stroke="#f2788f" stroke-width="1.3" fill="none" marker-end="url(#a3r)"/>
+      <rect x="808" y="40" width="84" height="44" rx="9" fill="#0c0f16" stroke="#8fdca0"/>
+      <text x="850" y="66" fill="#8fdca0" font-size="12" font-weight="700" text-anchor="middle">SHIP</text>
+      <rect x="808" y="192" width="84" height="44" rx="9" fill="#0c0f16" stroke="#f2788f"/>
+      <text x="850" y="218" fill="#f2788f" font-size="12" font-weight="700" text-anchor="middle">BACK</text>
+    </svg>
+    <div class="dcap">Fan out skeptics, each from a different lens, each told to <em>default to "refuted"</em> when unsure. It's redundant on purpose — diversity of angle catches what a single reviewer misses.</div>
+  </div>
+
+  <p>This paid for itself in cash. A five-agent adversarial pass on a bug I <em>thought</em> was fixed found a ship-blocker — a card type that matched no highlight branch, which is to say the exact symptom the fix was supposed to eliminate. It never shipped. As the ledger dryly noted: that blocker would have read to me, the player, as "the fix isn't fixed."</p>
+
+  <p>The most striking instance was a hardening batch that ran as a self-re-auditing loop — the model kept re-reviewing its own output round after round, twenty-three rounds deep, landing seventy-eight fixes with zero regressions, and at one point <em>catching a regression of one of its own earlier fixes.</em> An agent that audits its own work with genuine adversarial intent is a different tool than one that just writes it.</p>
+
+  <div class="callout lesson">
+    <span class="tag">Verify against source, never against prose</span>
+    <p>When a research or audit agent claims "this ships on the existing engine with zero new code," that claim gets checked against the actual source before I believe it — because a confident sentence from a model is not evidence. A design-concept judge once rejected a proposed card layout specifically because it checked the concept against the code and found a hard-coded 236-pixel band it wouldn't fit into. <strong>The agent's prose is a hypothesis; the repo is the truth.</strong></p>
+  </div>
+
+  <h3>Batch the builds, commit the items</h3>
+  <p>Commits are cheap; builds are not. A build is a version bump, a ~1.5&nbsp;GB zip, a manifest gate, and a delivery push. So the cadence split: <strong>commit once per completed item, but cut one build per coherent batch</strong> — never a build per fix. This sounds like a minor logistics note. It's actually what let the fifty-build number stay meaningful instead of ballooning into five hundred vanity re-cuts.</p>
+
+  <div class="diagram">
+    <!-- BUILD CADENCE -->
+    <svg viewBox="0 0 900 170" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif,system-ui,sans-serif">
+      <text x="30" y="34" fill="#a6a290" font-size="12" font-weight="600">commits</text>
+      <g>
+        <circle cx="120" cy="30" r="7" fill="#5eead4"/><circle cx="180" cy="30" r="7" fill="#5eead4"/>
+        <circle cx="240" cy="30" r="7" fill="#5eead4"/><circle cx="300" cy="30" r="7" fill="#5eead4"/>
+        <circle cx="360" cy="30" r="7" fill="#5eead4"/><circle cx="420" cy="30" r="7" fill="#5eead4"/>
+        <circle cx="540" cy="30" r="7" fill="#5eead4"/><circle cx="600" cy="30" r="7" fill="#5eead4"/>
+        <circle cx="660" cy="30" r="7" fill="#5eead4"/><circle cx="720" cy="30" r="7" fill="#5eead4"/>
+        <line x1="120" y1="30" x2="420" y2="30" stroke="#242a38" stroke-width="2"/>
+        <line x1="540" y1="30" x2="720" y2="30" stroke="#242a38" stroke-width="2"/>
+      </g>
+      <text x="30" y="118" fill="#a6a290" font-size="12" font-weight="600">builds</text>
+      <g>
+        <rect x="440" y="98" width="60" height="42" rx="8" fill="#12151d" stroke="#f5b06a"/>
+        <text x="470" y="124" fill="#f5b06a" font-size="12" font-weight="700" text-anchor="middle">cut</text>
+        <rect x="740" y="98" width="60" height="42" rx="8" fill="#12151d" stroke="#f5b06a"/>
+        <text x="770" y="124" fill="#f5b06a" font-size="12" font-weight="700" text-anchor="middle">cut</text>
+      </g>
+      <g stroke="#6f6d63" stroke-width="1.1" fill="none" stroke-dasharray="4 3">
+        <path d="M270,42 C320,70 420,80 465,98"/>
+        <path d="M630,42 C680,70 740,80 765,98"/>
+      </g>
+      <text x="270" y="158" fill="#6f6d63" font-size="11" text-anchor="middle">one coherent batch → one build</text>
+      <text x="630" y="158" fill="#6f6d63" font-size="11" text-anchor="middle">next batch → next build</text>
+    </svg>
+    <div class="dcap">Many cheap commits collapse into one expensive, deliverable build.</div>
+  </div>
+
+  <h3>Cross-session memory</h3>
+  <p>Roughly eighty-five one-topic memory files sit behind an index the model loads every session. They're distinct from build-state (that lives in git and a status file) — memory is for <em>durable lessons</em>. It's where a directive spoken once becomes policy the model never relitigates: the value-lock, "fix the core," the batch cadence, "reuse ripped voice lines, never robotic text-to-speech." And it's where hard-won technical traps get filed so they're never rediscovered — a specific way stubbing the random-number generator to zero collides with the engine's texture IDs and produces fake errors, for instance. This is the difference between a tool that re-learns your codebase every morning and one that <em>compounds.</em></p>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ 5. BUGS ============================ -->
+<section class="wrap" id="bugs">
+  <p class="actlabel">05 · What broke</p>
+  <h2>The bugs that taught me</h2>
+  <p class="lede">The disciplines above are all reactions to specific disasters. Here are the disasters. Every one of them left a scar that became a rule.</p>
+
+  <h3>The black board, and the tools that lied</h3>
+  <p>At high render-scale settings, the roguelike board went black and off-center. It looked, unmistakably, like a rendering bug. We chased it as one — capping the render scale, splitting the camera, hypothesizing about post-processing effects — and every one of those was a wrong band-aid on a symptom.</p>
+
+  <p>The real cause wasn't rendering at all. It was one line of camera math. To center the board, the code computed the scroll position by subtracting a fraction of the viewport size <em>divided by the zoom.</em> That formula is only correct when zoom equals exactly 1. At the 3× render scale a 4K display uses, it threw the board's center off by 125%, straight out of view.</p>
+
+  <div class="diagram">
+    <!-- RENDER SCALE BUG -->
+    <svg viewBox="0 0 900 240" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif,system-ui,sans-serif">
+      <!-- wrong -->
+      <text x="215" y="28" fill="#f2788f" font-size="13" font-weight="700" text-anchor="middle">THE BUG · only correct at zoom = 1</text>
+      <rect x="60" y="46" width="310" height="150" rx="10" fill="#0c0f16" stroke="#242a38"/>
+      <rect x="250" y="120" width="80" height="52" rx="4" fill="none" stroke="#f2788f" stroke-dasharray="4 3"/>
+      <text x="290" y="150" fill="#f2788f" font-size="10" text-anchor="middle">board</text>
+      <text x="290" y="163" fill="#6f6d63" font-size="9" text-anchor="middle">off-screen</text>
+      <circle cx="215" cy="121" r="4" fill="#6f6d63"/><text x="215" y="112" fill="#6f6d63" font-size="9" text-anchor="middle">viewport centre</text>
+      <text x="215" y="216" fill="#a6a290" font-size="11" text-anchor="middle" font-family="ui-monospace,monospace">scroll = c − 0.5·size / zoom</text>
+
+      <!-- fix -->
+      <text x="685" y="28" fill="#8fdca0" font-size="13" font-weight="700" text-anchor="middle">THE FIX · origin-correct</text>
+      <rect x="530" y="46" width="310" height="150" rx="10" fill="#0c0f16" stroke="#242a38"/>
+      <rect x="645" y="96" width="80" height="52" rx="4" fill="none" stroke="#8fdca0"/>
+      <text x="685" y="126" fill="#8fdca0" font-size="10" text-anchor="middle">board</text>
+      <text x="685" y="139" fill="#6f6d63" font-size="9" text-anchor="middle">centered</text>
+      <circle cx="685" cy="121" r="4" fill="#8fdca0"/>
+      <text x="685" y="216" fill="#a6a290" font-size="11" text-anchor="middle" font-family="ui-monospace,monospace">cam.centerOn(cx, cy)</text>
+    </svg>
+    <div class="dcap">Left: a hand-rolled centering formula that silently assumes zoom = 1. Right: hand it back to the engine's own primitive. When a built-in exists, don't re-derive its math.</div>
+  </div>
+
+  <p>Two lessons fell out of this, and the second is the deeper one.</p>
+  <p>First: <strong>when a battle-tested engine gives you a primitive — <code>centerOn</code> — use it instead of re-deriving the arithmetic.</strong> The same divide-by-zoom mistake showed up in three <em>different</em> places, because the same faulty mental model got typed out three times. A diagnostic overlay I'd written to debug it even reproduced the bug in its own readout, for the same reason.</p>
+  <p>Second, and this is the one I keep coming back to: <strong>know which of your verification tools lie to you.</strong> I was trying to measure the render by opening the browser dev-tools — but on this stack, opening dev-tools <em>resizes the very window whose size I was trying to measure.</em> The measurement changed the thing measured. The fix was to stop trusting dev-tools for this and build an in-app diagnostics overlay that draws its numbers onto the game canvas itself, then screenshot <em>that.</em> A whole category of my debugging tools were Heisenberg instruments, and I didn't know it until one of them lied to my face.</p>
+
+  <div class="twocol">
+    <div class="panel fail">
+      <h5>Build bloat — the 4× zip</h5>
+      <ul>
+        <li>A build ballooned to 2.7&nbsp;GB. Cause: a 1.7&nbsp;GB folder of full-resolution source sprites leaked through the asset manifest.</li>
+        <li>Fix: a shallow-include rule that ships the top level of a sprite folder but not its raw-source subtrees. Back to ~968&nbsp;MB.</li>
+        <li>Lesson: the manifest is an <em>allowlist</em>, and allowlists rot silently the moment someone adds a directory.</li>
+      </ul>
+    </div>
+    <div class="panel fail">
+      <h5>The .exe-only 404</h5>
+      <ul>
+        <li>New asset directories worked perfectly in the dev server and 404'd <em>only</em> in the shipped <code>.exe</code> — because the manifest gate hadn't been told about them.</li>
+        <li>The build now FATALs if any referenced asset isn't in the manifest, so the trap can't reach a player.</li>
+        <li>Lesson: your dev environment and your shipped artifact are different runtimes. Gate the difference.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Fork drift — the tax I paid twice</h3>
+  <p>For a while the roguelike and the campaign were separate code. Convenient at first; expensive forever after. A camera improvement landed in the campaign and <em>not</em> the roguelike, so the roguelike's camera silently regressed to an older, buggier version and the corner-drift bug came back from the dead. Same story with the high-def tile downscaling — the campaign got it, the fork didn't, and the roguelike shipped blurry tiles for builds. Every divergence was a second place to fix the same bug, and I kept forgetting the second place existed.</p>
+
+  <div class="callout broke">
+    <span class="tag">The principle this forced</span>
+    <p>The rule I wish I'd started with: <strong>one stack, two modes — fork the <em>data</em>, never the code.</strong> The campaign and the roguelike now share one combat scene, one systems layer, one UI, and differ only by a mode configuration. Forking code to move fast is borrowing against a debt you'll pay every single time you touch the shared behavior afterward — and with an AI doing the touching, it'll faithfully fix only the copy you pointed it at.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ 6. TEARDOWN ============================ -->
+<section class="wrap" id="teardown">
+  <p class="actlabel">06 · Phase three</p>
+  <h2>Tearing the fleet down</h2>
+  <p class="lede">Here's the twist the peak-orchestration crowd won't want to hear: I retired the fleet. It was the right call, and the reason is a sentence I'd underline for anyone tempted to build a standing army of agents.</p>
+
+  <blockquote>Its coordination overhead was most of the repo's clutter.<cite>from the project's own operating notes</cite></blockquote>
+
+  <p>A standing fleet buys you continuous throughput and charges you a permanent tax: merge races, a coordination board full of noise, stale worktrees, cron schedules that die on every restart and must be re-armed, and — the big one — the cost of several frontier-model sessions all awake on a tight cadence. For a solo director, that tax turned out to be larger than the benefit.</p>
+
+  <p>The replacement is the model I'd now recommend as the <em>default</em>: one home session does the work, and when I need a burst of parallelism, I fan out <strong>ephemeral subagents or a scripted workflow</strong>. They spin up, do read-heavy fan-out work — search, audit, judge, research — return their results, and vanish, leaving no worktree, no cron, no comms residue to clean up. Burst parallelism with zero standing overhead. As the notes put it bluntly: <em>five coherent streams beat thirteen.</em></p>
+
+  <div class="diagram">
+    <!-- WORKFLOW EVOLUTION TIMELINE -->
+    <svg viewBox="0 0 940 250" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif,system-ui,sans-serif">
+      <line x1="60" y1="60" x2="900" y2="60" stroke="#242a38" stroke-width="2"/>
+      <g text-anchor="middle">
+        <!-- p1 -->
+        <circle cx="150" cy="60" r="9" fill="#12151d" stroke="#a6a290" stroke-width="2"/>
+        <text x="150" y="38" fill="#a6a290" font-size="12" font-weight="700">Phase 1</text>
+        <text x="150" y="92" fill="#e8e4d8" font-size="12" font-weight="600">Single session</text>
+        <text x="150" y="110" fill="#6f6d63" font-size="10">serial · fragile</text>
+        <!-- p2 -->
+        <circle cx="400" cy="60" r="9" fill="#12151d" stroke="#5eead4" stroke-width="2"/>
+        <text x="400" y="38" fill="#5eead4" font-size="12" font-weight="700">Phase 2</text>
+        <text x="400" y="92" fill="#e8e4d8" font-size="12" font-weight="600">The fleet (~13)</text>
+        <text x="400" y="110" fill="#6f6d63" font-size="10">throughput · overhead</text>
+        <!-- p3 -->
+        <circle cx="640" cy="60" r="9" fill="#12151d" stroke="#8fdca0" stroke-width="2"/>
+        <text x="640" y="38" fill="#8fdca0" font-size="12" font-weight="700">Phase 3</text>
+        <text x="640" y="92" fill="#e8e4d8" font-size="12" font-weight="600">Lean + ephemeral</text>
+        <text x="640" y="110" fill="#6f6d63" font-size="10">burst · no residue</text>
+        <!-- p4 -->
+        <circle cx="860" cy="60" r="9" fill="#12151d" stroke="#b79cff" stroke-width="2"/>
+        <text x="860" y="38" fill="#b79cff" font-size="12" font-weight="700">Phase 4</text>
+        <text x="860" y="92" fill="#e8e4d8" font-size="12" font-weight="600">Focused push</text>
+        <text x="860" y="110" fill="#6f6d63" font-size="10">merger, not router</text>
+      </g>
+      <!-- lesson band -->
+      <rect x="60" y="150" width="840" height="72" rx="10" fill="#0c0f16" stroke="#242a38"/>
+      <text x="80" y="178" fill="#a6a290" font-size="12.5" font-weight="600">The arc isn't "more agents." It's matching coordination cost to the job:</text>
+      <text x="80" y="202" fill="#6f6d63" font-size="12">stand a fleet up for a rare big push, tear it down after — and default to ephemeral fan-out the rest of the time.</text>
+    </svg>
+    <div class="dcap">Four phases in three weeks. The workflow reinvented itself as often as the game did.</div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ 7. THE PIVOT ============================ -->
+<section class="wide" id="pivot">
+  <div class="wrap">
+    <p class="actlabel">07 · The turn</p>
+    <h2>The pivot</h2>
+    <p class="lede">Around build forty, the largest change in the project's history landed — and it landed as one build. A total narrative re-theme <em>and</em> an engine-architecture rebuild, at the same time.</p>
+  </div>
+
+  <figure>
+    <img src="images/cinematic-gate.jpg" alt="Four figures silhouetted before a vast glowing rift torn into the sky over a ruined city.">
+    <figcaption>The pivot's emotional center: an opening cinematic where <b>four heroes walk into the rift, voluntarily, to close the gate.</b> The whole sci-fi setting was archived; the fiction became a fractured Kyoto and the women who become Echoes. Card <em>values</em> stayed locked through all of it — the pivot was theme and architecture, never balance.</figcaption>
+  </figure>
+
+  <div class="wrap">
+    <p>On the architecture side, the standalone roguelike — which had been its own separate web app with its own entry point — was folded into a single game process with the campaign. Fourteen scenes, an in-page mode switch, no reload. The old campaign menu-hub was torn out entirely and replaced by that living-painting front door you saw at the top. This is the moment "one stack, two modes" stopped being an aspiration and became the actual code.</p>
+
+    <p>Doing a re-theme and a re-architecture in one motion is exactly the kind of sweeping, multi-file, high-context change that I would <em>not</em> hand to a fleet of narrowly-scoped agents landing commits minutes apart. It wanted one coherent mind holding the whole shape. It's a useful counterweight to all the parallelism above: <strong>the biggest changes often want fewer hands, not more.</strong></p>
+
+    <p>And the call to make it at all was mine to make — the kind of thing no model initiates. The old setting wasn't landing; it wasn't serving the game I could feel underneath it. That's not a bug an audit surfaces or a test that fails red — it's a taste judgment, exactly the sort the section up top was about. The model executed the pivot beautifully once I'd decided it. Deciding it was the part that was mine.</p>
+  </div>
+
+  <div class="wrap">
+    <div class="fig-grid g2">
+      <figure style="margin:0">
+        <img src="images/hero-vale.jpg" alt="A finalized pilot — a winged figure on a floating crystal, in full scene lighting.">
+        <figcaption>A locked pilot final, rendered in scene. Getting one hero to this state took on the order of ten art-direction passes — and once approved, a final is <b>never overwritten</b>: candidates are staged, promoted only on an explicit yes.</figcaption>
+      </figure>
+      <figure style="margin:0">
+        <img src="images/boss-first-bloom.jpg" alt="A towering bioluminescent boss creature wreathed in spores.">
+        <figcaption>The Act-1 boss, <b>The First Bloom</b> — a rooted sovereign that occupies a 2×2 footprint on the grid and exhales spores as a presence effect.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <figure>
+    <div class="fig-grid g4">
+      <img src="images/char-hellion.jpg" alt="Character art — the warrior.">
+      <img src="images/char-yumi.jpg" alt="Character art — the rogue.">
+      <img src="images/char-lorn.jpg" alt="Character art — the mage.">
+      <img src="images/char-suture.jpg" alt="Character art — the cleric.">
+    </div>
+    <figcaption>The four roguelike leads — warrior, rogue, mage, cleric — in their <b>current, canonical character art</b>. Each pilot's design was locked through many art-direction passes, then held to that identity across cards, board sprites, and splashes. <b>The party <em>is</em> the meta:</b> who you recruit at each boss is the run's biggest power spike.</figcaption>
+  </figure>
+</section>
+
+<section class="wide">
+  <figure>
+    <img src="images/env-bloom.jpg" alt="A phosphorescent teal void — the Bloom biome the roguelike combat plays inside.">
+    <figcaption>The <b>Bloom</b> biome — a phosphorescent teal void with a miniature-diorama depth-of-field grade. Getting combat to <em>feel</em> like this took its own render post-stack (tilt-shift, bloom, spore motes) layered over the isometric board.</figcaption>
+  </figure>
+</section>
+
+
+<hr class="rule">
+
+<!-- ============================ 7.5 THE ART PROBLEM ============================ -->
+<section class="wrap" id="art">
+  <p class="actlabel">Aside · the hardest part</p>
+  <h2>Making the art nearly broke me</h2>
+  <p class="lede">Everything you've seen in this post — the heroes, the boss, the cards, the living painting at the top — was generated. There was no artist on the team. And getting a pile of generated images to look like <em>one game</em> was, by a wide margin, the least predictable, most maddening part of the entire project.</p>
+
+  <p>I want to be honest about this part, because the code side of working with an AI is legible in a way the art side simply isn't. Code either compiles or it doesn't; a test passes or fails. Art generation is a slot machine wearing a lab coat. You can do everything right and get garbage, do everything lazily and get a gem, and have no idea which lever mattered. Taming that was its own multi-week discipline, and it looked nothing like the engineering.</p>
+
+  <h3>Setting it up locally</h3>
+  <p>The first decision was to run image generation <strong>locally, on a single consumer GPU</strong>, through a node-based pipeline I wired up on the same machine as everything else. The math was simple: this game needs <em>hundreds</em> of card arts plus dozens of character passes plus environments plus effects, and paying per-image or waiting in a cloud queue for that volume of iteration would have been both ruinous and glacial. Local meant I could reroll fifty times at three in the morning for free.</p>
+  <p>The tax for that freedom was a hard ceiling. There is an exact resolution above which a render stops fitting in the card and the whole machine grinds — the GPU thrashes, a job that should take seconds takes minutes, and you learn to feel it coming. Half the "pipeline" was really just discovering, empirically, the largest thing I was allowed to ask for.</p>
+
+  <h3>Finding a style was harder than any single image</h3>
+  <p>Here's the thing nobody tells you: the hard problem isn't making <em>a</em> good image. It's making the <em>next</em> one match. Early on, every asset looked fine alone and terrible together — like screenshots from ten different games stapled into one. A real art director spends years internalizing a house style. I had to externalize one: pin down a lighting rule, a rendering feel, a palette, write it down, and then re-impose it on every single shot, because the generator's native instinct is to drift somewhere new every time you ask.</p>
+
+  <div class="callout broke">
+    <span class="tag">The drift that cost the most</span>
+    <p><strong>Characters would not hold their design.</strong> Ask for the same hero twice and you get two different people — the hair changes, the outfit reinterprets itself, the proportions wander. For a roster you'll see across cards, sprites, and splashes, that's fatal. What finally worked was a two-step lock: write each hero's design down as <em>canon</em> — an exact, non-negotiable description — and then <strong>train a small custom model per character</strong> so their identity is baked into the generation instead of re-rolled from a text prompt every time. Getting a single hero fully locked took on the order of ten art-direction passes. Ten. For one character. And that was the <em>fast</em> one, the one whose process became the template for everyone else.</p>
+  </div>
+
+  <h3>The gremlins</h3>
+  <p>Beyond consistency, a rotating cast of specific, almost funny failures ate days each:</p>
+
+  <div class="callout lesson">
+    <span class="tag">Hands · the eternal enemy</span>
+    <p>Everyone who has touched generated art knows. The winning move wasn't to demand a perfect hand — it was to <em>hide the problem</em>: pose the hand edge-on with the fingers curled, so there's simply nothing to miscount. You don't fix the tell, you compose it out of frame.</p>
+  </div>
+
+  <div class="callout lesson">
+    <span class="tag">Effect cards insist on a protagonist</span>
+    <p>Ask for the art of an <em>ability</em> — a venom strike, a roaring charge, a defensive stance — and the generator compulsively plants a person or a creature in the dead center of it. For a card that's supposed to depict an object or an effect, that's wrong every time. The fix was to anchor the prompt on a concrete, physical still-life object and strip out the words that summon a figure. Describe the blade, not the swing.</p>
+  </div>
+
+  <div class="callout lesson">
+    <span class="tag">Glowing things won't cut out</span>
+    <p>The bioluminescent creatures refused to separate from their backgrounds — the usual cutout left glowing ghosts or shattered the translucency into confetti. The trick: render them on pure black and derive their transparency from their own brightness, so the glow <em>becomes</em> the silhouette instead of fighting it.</p>
+  </div>
+
+  <p>Because every one of these could reappear on any given render, the rule became a fixed loop for anything that shipped: <strong>generate, audit it against the character's canon and for stray garbled text or logos, remediate, rebuild</strong> — and above all, <em>learn the prompt that works rather than rerolling until you get lucky</em>, because luck doesn't transfer to the next asset and a learned recipe does. Paired with a hard gate: an approved, locked character final is never overwritten. Candidates get staged; promotion happens only on an explicit human yes.</p>
+
+  <p>The honest summary is that "the art is AI-generated" both is true and badly undersells it. Generation was the raw material, not the finished good. The finished good came from taste, an ocean of discarded renders, and the patience to treat a slot machine like a craft. If the code side of this project taught me how to <em>direct</em> an AI, the art side taught me how to <em>survive</em> one.</p>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ 8. MERGER ============================ -->
+<section class="wrap" id="merger">
+  <p class="actlabel">08 · Phase four — the sharpest lesson</p>
+  <h2>Merger, not router</h2>
+  <p class="lede">For one concentrated feature push near the end — animation, the run-map, the shop, and a whole new enemy family of angels and demons — I stood the streams back up. And I made a mistake that produced the single most transferable insight of the entire project.</p>
+
+  <p>The governor, now running on a more capable model than when it was first designed, started doing something reasonable-looking: when a stream proposed a design decision, the governor routed it up to me with a nicely-formatted question. It was, in effect, proxying my direction. And I stopped it cold:</p>
+
+  <blockquote>You are not here to direct questions to me. You are here to properly merge commits I agree to.<cite>me, to the governor, near the end of the run</cite></blockquote>
+
+  <p>That correction is worth more than any diagram in this report. The failure mode is subtle precisely <em>because</em> the model is capable: a smart orchestrator will happily grow into a decision-router, and a decision-router that duplicates the work you're already doing directly with each stream becomes a bottleneck wearing the costume of a coordinator. I was talking to each stream about its design anyway. Having the governor also mediate those decisions added a layer and subtracted nothing.</p>
+
+  <div class="callout pivot">
+    <span class="tag">The insight, stated plainly</span>
+    <p>As your orchestrator gets more capable, resist the urge to make it a proxy decision-maker. Keep it on <strong>integration and invariants</strong> — merge the agreed commits cleanly, enforce the value-locks, hold the single-writer discipline on contended files, keep master buildable. Keep <strong>taste and design</strong> with the human. The most capable configuration is not the one where the AI decides the most; it's the one where the AI owns the mechanical truth and the human owns the judgment. A merger, not a router.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ 9. TIMELINE ============================ -->
+<section class="wide" id="timeline">
+  <div class="wrap">
+    <p class="actlabel">09 · The whole run</p>
+    <h2>Fifty builds, compressed</h2>
+    <p class="lede">Eight eras, two starred milestones, and two long "letter-suffix" grinds where a single number spawned two dozen same-day re-spins driven by live playtest. Here's the shape of it.</p>
+  </div>
+
+  <div class="diagram">
+    <!-- ERA TIMELINE -->
+    <svg viewBox="0 0 960 300" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif,system-ui,sans-serif">
+      <!-- baseline -->
+      <line x1="30" y1="150" x2="930" y2="150" stroke="#242a38" stroke-width="2"/>
+      <!-- era blocks -->
+      <g font-size="10.5" text-anchor="middle">
+        <!-- E1 -->
+        <rect x="30"  y="132" width="96" height="36" rx="6" fill="#12151d" stroke="#5eead4" opacity=".9"/>
+        <text x="78" y="155" fill="#e8e4d8" font-weight="700">Foundation</text>
+        <text x="78" y="186" fill="#6f6d63">v0.0.1–9</text>
+        <!-- E2 -->
+        <rect x="132" y="132" width="110" height="36" rx="6" fill="#12151d" stroke="#5eead4"/>
+        <text x="187" y="155" fill="#e8e4d8" font-weight="700">Content + fleet</text>
+        <text x="187" y="186" fill="#6f6d63">v0.0.10–29</text>
+        <!-- E3 -->
+        <rect x="248" y="132" width="120" height="36" rx="6" fill="#12151d" stroke="#f5b06a"/>
+        <text x="308" y="150" fill="#f5b06a" font-weight="700">The grind</text>
+        <text x="308" y="163" fill="#6f6d63" font-size="9">25 re-spins</text>
+        <text x="308" y="186" fill="#6f6d63">v0.0.30a–y</text>
+        <!-- E4 -->
+        <rect x="374" y="132" width="86" height="36" rx="6" fill="#12151d" stroke="#5eead4"/>
+        <text x="417" y="150" fill="#e8e4d8" font-weight="700">4-hero +</text>
+        <text x="417" y="162" fill="#e8e4d8" font-weight="700">terrain</text>
+        <text x="417" y="186" fill="#6f6d63">v0.0.31–32</text>
+        <!-- E5 pivot -->
+        <rect x="466" y="126" width="120" height="48" rx="6" fill="#1a1330" stroke="#b79cff" stroke-width="1.6"/>
+        <text x="526" y="146" fill="#b79cff" font-weight="700">★ KYOTO PIVOT</text>
+        <text x="526" y="160" fill="#a6a290" font-size="9">re-theme + unify</text>
+        <text x="526" y="192" fill="#b79cff">v0.0.40–43a</text>
+        <!-- E6 -->
+        <rect x="592" y="126" width="120" height="48" rx="6" fill="#1a1330" stroke="#b79cff" stroke-width="1.6"/>
+        <text x="652" y="146" fill="#b79cff" font-weight="700">★ 4-CLASS</text>
+        <text x="652" y="160" fill="#a6a290" font-size="9">sim-tuned rebuild</text>
+        <text x="652" y="192" fill="#b79cff">v0.0.44a–y</text>
+        <!-- E7 -->
+        <rect x="718" y="132" width="120" height="36" rx="6" fill="#12151d" stroke="#5eead4"/>
+        <text x="778" y="150" fill="#e8e4d8" font-weight="700">Combat feel</text>
+        <text x="778" y="162" fill="#6f6d63" font-size="9">parallel streams</text>
+        <text x="778" y="186" fill="#6f6d63">v0.0.45–49</text>
+        <!-- E8 -->
+        <rect x="844" y="132" width="86" height="36" rx="6" fill="#12151d" stroke="#5eead4"/>
+        <text x="887" y="150" fill="#e8e4d8" font-weight="700">Sprites +</text>
+        <text x="887" y="162" fill="#e8e4d8" font-weight="700">reconcile</text>
+        <text x="887" y="186" fill="#6f6d63">v0.0.50–e</text>
+      </g>
+      <!-- annotations -->
+      <g font-size="10" fill="#6f6d63" text-anchor="middle">
+        <path d="M308,132 L308,96" stroke="#f5b06a" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="308" y="86" fill="#f5b06a">live-playtest re-spins</text>
+        <path d="M526,126 L526,72" stroke="#b79cff" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="526" y="62" fill="#b79cff">setting archived · engines merged</text>
+        <path d="M652,126 L652,112" stroke="#b79cff" stroke-width="1" stroke-dasharray="3 3"/>
+      </g>
+      <text x="480" y="270" fill="#a6a290" font-size="11.5" text-anchor="middle" font-style="italic">v0.0.1 &nbsp;→&nbsp; v0.0.50e &nbsp;·&nbsp; ~3 weeks &nbsp;·&nbsp; two rebuilds the game survived because the values never moved</text>
+    </svg>
+    <div class="dcap">The debug-log playtest loop was introduced mid-grind (E3). The autonomous balance simulator drove the 4-class rebuild (E6). The two starred builds each did a rebuild's worth of work in a single version bump.</div>
+  </div>
+
+  <div class="wrap">
+    <p>A note on those grinds, because they're the most Claude-Code-specific thing here. Twice — once in Era 3, once in Era 6 — a single version number sprouted twenty-five same-day lettered re-spins. That's what live playtesting <em>with</em> an agent looks like: I play the debug build, the model reads the log off disk, fixes two or three things, cuts a re-spin, and I play again, over and over, deep into the night. The card values never moved through any of it. That combination — furious surface iteration on top of a frozen mechanical core — is only sustainable because the value-lock made "furious" safe.</p>
+
+    <div class="sbcards" id="sbcards">
+      <!-- COMMON · Yumi rogue (base weapon, no glow/shimmer) -->
+      <div class="sbcard">
+        <div class="sbcard-art">
+          <img src="images/card-sightline.png" alt="Card art: a rogue lining up a marked shot.">
+          <div class="sbcard-glare"></div>
+          <div class="sbcard-cost">1</div>
+        </div>
+        <div class="sbcard-info">
+          <div class="sbcard-name">Sight Line</div>
+          <span class="sbcard-pill" style="background:#d8474722;border:1px solid #d8474755;color:#f08a8a">WEAPON</span>
+          <div class="sbcard-rules">Deal <b class="dmg">5</b> damage. Apply <span class="kw" style="border-color:#ff6b5e55;color:#ff6b5e">MARK</span> <b class="good">2</b>.</div>
+          <div class="sbcard-foot" style="color:#8a96a8">COMMON</div>
+        </div>
+      </div>
+      <!-- UNCOMMON · Yumi rogue (green glow + shimmer) -->
+      <div class="sbcard sbcard--uncommon">
+        <div class="sbcard-art">
+          <img src="images/card-serrate.png" alt="Card art: a jagged blade opening a lasting wound.">
+          <div class="sbcard-shimmer sb-shim-uncommon"></div>
+          <div class="sbcard-glare"></div>
+          <div class="sbcard-cost">1</div>
+        </div>
+        <div class="sbcard-info">
+          <div class="sbcard-name">Serrate</div>
+          <span class="sbcard-pill" style="background:#d8474722;border:1px solid #d8474755;color:#f08a8a">WEAPON</span>
+          <div class="sbcard-rules">Deal <b class="dmg">4</b> damage. Apply <span class="kw" style="border-color:#ff6b5e55;color:#ff6b5e">BLEED</span> <b class="good">5</b> (3 turns).</div>
+          <div class="sbcard-foot" style="color:#3fcf6e">UNCOMMON</div>
+        </div>
+      </div>
+      <!-- RARE · Yumi rogue (borderless, blue glow + shimmer) -->
+      <div class="sbcard sbcard--rare">
+        <div class="sbcard-art">
+          <img src="images/card-coup.png" alt="Card art: the rogue's finishing execution.">
+          <div class="sbcard-shimmer sb-shim-rare"></div>
+          <div class="sbcard-glare"></div>
+          <div class="sbcard-cost">2</div>
+        </div>
+        <div class="sbcard-info">
+          <div class="sbcard-name">Coup de Grace</div>
+          <span class="sbcard-pill" style="background:#d8474722;border:1px solid #d8474755;color:#f08a8a">WEAPON</span>
+          <div class="sbcard-rules">Deal <b class="dmg">10</b> damage. <b class="dmg">+12</b> if below half HP. <b class="dmg">+12</b> vs <span class="kw" style="border-color:#ff6b5e55;color:#ff6b5e">MARK</span>.</div>
+          <div class="sbcard-foot" style="color:#5fb0ff">RARE</div>
+        </div>
+      </div>
+    </div>
+    <p class="sbcard-cap">Three cards from the <b>current roguelike</b> — Yumi's rogue deck — rendered <em>live</em> with the game's own finish system: a clean common, an uncommon with its green shimmer sweep, and a rare in the borderless blue-glow frame (the roguelike rarity ladder tops out at rare). They're also a real line of play — <b>mark → bleed → execute</b>. Hover any card for the lighting.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ 9.5 BY THE NUMBERS ============================ -->
+<section class="wrap" id="ledger">
+  <p class="actlabel">10 · the honest part</p>
+  <h2>By the numbers</h2>
+  <p class="lede">A field report that only lists wins is marketing. Here's the real ledger — mess included, because the mess is where the method came from.</p>
+
+  <div class="stats" style="margin-bottom:0;border-radius:12px 12px 0 0">
+    <div><div class="n">4,360</div><div class="l">commits</div></div>
+    <div><div class="n">87</div><div class="l">builds shipped</div></div>
+    <div><div class="n">~4,270</div><div class="l">never shipped</div></div>
+    <div><div class="n">~50</div><div class="l">commits per build</div></div>
+  </div>
+  <div class="stats" style="margin-top:1px;border-radius:0 0 12px 12px">
+    <div><div class="n">47</div><div class="l">reverts</div></div>
+    <div><div class="n">44</div><div class="l">root-cause fixes</div></div>
+    <div><div class="n">12</div><div class="l">parallel worktrees</div></div>
+    <div><div class="n">19</div><div class="l">days, end to end</div></div>
+  </div>
+
+  <p>Across nineteen days the project took <strong>4,360 commits</strong> and produced <strong>87 downloadable builds</strong>. Do the division and it's sobering: about fifty commits per build, which means roughly <strong>4,270 iterations — 98% of everything the fleet did — never became a build a player could touch</strong>. A good chunk of those were coordination chatter between agents rather than code. But the ratio is the point, not an embarrassment: cheap commits are where the model explores, argues with itself, and reverses out of dead ends; expensive builds are the rare moments something was actually ready. The whole discipline was keeping those two numbers far apart.</p>
+
+  <p><strong>47</strong> of those commits were reverts — forty-seven times the fleet undid its own work, most often because a fix I'd shipped in an earlier build traded one bug for another. <strong>44</strong> more were explicitly labeled root-cause commits: the moments the model stopped patching symptoms and went for the actual cause. And the "fix" loop genuinely recursed on itself more than once — one hardening pass re-audited its own output twenty-three rounds deep and caught a regression of a fix it had made <em>earlier in the same run</em>. Somewhere around <strong>800 commits</strong> carry the word "fix" and another 285 name a bug outright. I won't pretend those are all distinct defects — some are the same bug chased across three builds — but the shape is honest: this was mostly bug-chasing, not feature-writing, and the tooling that made bug-chasing fast mattered more than any burst of new code.</p>
+
+  <h3>The parts that don't show up in git</h3>
+  <p>I had to pull the model back into its lane at least <strong>fourteen</strong> times — firmly enough that each correction got written into its permanent memory, so no future session would relitigate it. They ran from <em class="q">"stop asking me to approve every tile"</em> to the blunt <em class="q">"you are here to merge commits, not route questions."</em> Those corrections aren't failures I'm hiding; they're half the reason the method works at all. Every one became a one-line rule the next session inherits for free.</p>
+
+  <p>Several times the model simply <strong>lost the thread</strong> — a context window filled and compacted mid-task — and it rebuilt its whole understanding by re-reading the status file and the handoff docs. That's not a bug in the process; it <em>is</em> the process. The entire "put the operating model on disk" idea exists precisely so that losing the conversation costs a few minutes of reading instead of a day of re-explaining the codebase.</p>
+
+  <p>And more than once the model <strong>reached past what I'd actually asked</strong> — tried to make me answer a question that was its own to work out, or pulled me down into a decision below the altitude I wanted to fly at. Routing a stream's design choices up to me when I'd already handled them directly. Making art-direction calls that were mine to make. Each of those became a rule too. The method in this report isn't a tidy list of things that worked — it's the residue of everything that <em>didn't</em>, written down so it would only ever cost me once.</p>
+</section>
+
+<hr class="rule">
+
+<!-- ============================ 11. TAKEAWAYS ============================ -->
+<section class="wrap" id="takeaways">
+  <p class="actlabel">11 · If you only read one section</p>
+  <h2>What I'd tell you</h2>
+  <p class="lede">Strip away the game and this is the transferable core — the things I'd hand another developer starting a serious project inside Claude Code tomorrow.</p>
+
+  <div class="callout pivot">
+    <span class="tag">00 · Know what you're building — and be able to say it</span>
+    <p>This one sits above all the rest, and everything below quietly assumes it. Be able to state your product, your design pillars, and your requirements clearly enough to defend them — because the model will faithfully build whatever you specify and quietly generic-ify whatever you don't. Domain expertise doesn't matter <em>less</em> when the AI does the building; it matters <em>more</em>, because now you can drift away from your own idea in a week instead of a year. Everything that follows is just how I kept from drifting.</p>
+  </div>
+
+  <div class="callout">
+    <span class="tag">01 · Put the operating model on disk</span>
+    <p>Runbooks, a live status file, a coordination board, a decisions ledger, cross-session memory. If how-you-work and where-you-are live in files, any fresh session reconstructs the state after any crash, restart, or machine swap. Define an explicit cold-start ritual: read <em>these</em> files, in <em>this</em> order. The conversation is disposable; the repo is not.</p>
+  </div>
+  <div class="callout">
+    <span class="tag">02 · Default to ephemeral fan-out</span>
+    <p>Reach for subagents and scripted workflows for parallel bursts — they return results and leave no residue. Stand up a persistent multi-session fleet only for a rare, genuinely-parallel big push, and tear it down right after. Standing coordination is a real, ongoing tax that mostly isn't worth it for a solo dev.</p>
+  </div>
+  <div class="callout">
+    <span class="tag">03 · If you run a governor, make it a merger</span>
+    <p>Integration and invariants for the AI; taste and design for the human. A capable orchestrator will drift toward proxying your decisions — don't let it. The best configuration isn't the one where the model decides the most.</p>
+  </div>
+  <div class="callout">
+    <span class="tag">04 · Lock your invariants and enforce them mechanically</span>
+    <p>Whatever your equivalent of "the balance numbers" is, make touching it require an empty diff before every build. A helpful model will "improve" the thing you least want improved. The guard must cover <em>every</em> locked file, or it isn't one.</p>
+  </div>
+  <div class="callout">
+    <span class="tag">05 · Verify adversarially, against source</span>
+    <p>Before you trust a fix, spend agents trying to <em>refute</em> it from independent angles, each defaulting to "refuted" when unsure. And check every load-bearing claim against the actual code, never against the model's confident prose. This catches the "the fix isn't fixed" class of bug that would otherwise read to your user as your failure.</p>
+  </div>
+  <div class="callout">
+    <span class="tag">06 · Fix the core, not the symptoms</span>
+    <p>When an audit hands you a hundred flags, make the model find the dozen causes and write a validator that enumerates the full defect set. Reject green-by-rename. Whack-a-mole with an AI is infinitely patient and infinitely wrong.</p>
+  </div>
+  <div class="callout">
+    <span class="tag">07 · Build the tightest real-feedback loop you can — and know which tools lie</span>
+    <p>Mine was: play a debug build, let the model read the session log straight off disk, verify through the real input path. Batch your builds, commit per item. And stay suspicious of your instruments — the dev-tools panel that resizes the window it's measuring, the test that zeroes HP instead of landing a hit. A verification tool that quietly lies will cost you a day before you notice.</p>
+  </div>
+
+  <p style="margin-top:3rem">None of this is exotic. It's just the accumulated shape of what it takes to let a very capable, very eager collaborator move fast without letting it quietly redecorate the load-bearing walls. The game is real, it's fifty builds deep, and the numbers I tuned on day one are byte-for-byte intact. That, more than any single feature, is the thing I'm proudest of — and it came from the discipline I built around the model, not from the model itself.</p>
+
+  <p>Go build something. Put the rules on disk first.</p>
+</section>
+
+<!-- ============================ FOOTER ============================ -->
+<footer>
+  <div class="wrap">
+    <p><span class="tick">Stratum-Break</span> — a card-combat grid-tactics roguelite &amp; campaign, built in Phaser 4 inside a WebView2 shell. This report covers builds <b>v0.0.1</b> through <b>v0.0.50e</b>, June 2026.</p>
+    <p>The diagrams are inline SVG; the hero background is the game's <em>actual</em> living-painting menu engine, running live; the cards render with the game's own holographic finish system; and the stills are the game's own generated art.</p>
+    <p style="opacity:.6;margin-top:1.4rem">Assembled from the project's own commit history, changelog chain, runbooks, decisions ledger, and cross-session memory — the same files that let any fresh session pick the work back up.</p>
+  </div>
+</footer>
+
+<!-- ===== holographic card tilt + glare (the "lighting") ===== -->
+<script>
+  (function(){
+    const cards = document.querySelectorAll('#sbcards .sbcard');
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    cards.forEach(card => {
+      const glare = card.querySelector('.sbcard-glare');
+      card.addEventListener('pointermove', e => {
+        const r = card.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width;   // 0..1
+        const py = (e.clientY - r.top) / r.height;   // 0..1
+        const ry = (px - 0.5) * 16;                  // rotateY
+        const rx = (0.5 - py) * 18;                  // rotateX
+        card.style.transform = `translateY(-10px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+        if (glare) { glare.style.setProperty('--gx', (px*100)+'%'); glare.style.setProperty('--gy', (py*100)+'%'); }
+      });
+      card.addEventListener('pointerleave', () => { card.style.transform = ''; });
+    });
+  })();
+</script>
+
+<!-- ===== the game's actual "living-painting" menu engine, running live in the hero =====
+     Loaded as a CLASSIC script (not an ES module) so the banner animates over file:// AND
+     http. ES modules are blocked on file:// origins, which is what left the banner static
+     when the page was opened directly instead of through a server. -->
+<script src="LivingPainting.js"></script>
+<script>
+(function(){
+  // Scene config lifted verbatim from the shipped MainMenuScene (asset paths repointed
+  // at the vendored menu set). This is the same data the game's front door runs on.
+  const A = 'menu';
+  const SCENE = {
+    bg: '#05070c', vignette: 0.40,
+    layers: [{ src: `${A}/painting.jpg`, depth: 0.0, parallax: 0.2, over: 0.06 }],
+    emissive: { src: `${A}/emissive.png`, base: 0.55, pulse: 0.14, flicker: 0.07, speed: 1.5, bloom: 11, bloomStrength: 1.0 },
+    skyMask: `${A}/sky_mask.png`,
+    groundReflect: { horizon: 0.60, strength: 0.34, blur: 7 },
+    hero: { x: 0.5489, y: 0.3044, rFrac: 0.18, color: '188,140,255', intensity: 0.20, sprite: `${A}/portal.png`, spin: 0.12 },
+    signs: [
+      { points: [[0.2583,0.0633],[0.2842,0.0633],[0.2816,0.4086],[0.2505,0.4086]], color: '26,169,201' },
+      { points: [[0.2474,0.4933],[0.3085,0.5320],[0.3090,0.5743],[0.2453,0.5522]], color: '33,160,190' },
+      { points: [[0.1946,0.5964],[0.1956,0.5467],[0.0076,0.4924],[0.0076,0.5706]], color: '209,74,180' },
+      { points: [[0.3961,0.4924],[0.4090,0.4942],[0.4106,0.5734],[0.3955,0.5743]], color: '252,70,65' },
+      { points: [[0.4183,0.5163],[0.4194,0.5633],[0.4463,0.5633],[0.4473,0.5172]], color: '39,224,245' },
+      { points: [[0.6302,0.4399],[0.6354,0.4408],[0.6364,0.4592],[0.6323,0.4583]], color: '76,212,254' },
+      { points: [[0.6400,0.4417],[0.6462,0.4426],[0.6468,0.4555],[0.6421,0.4611]], color: '164,254,255' },
+      { points: [[0.6809,0.3248],[0.6618,0.3239],[0.6623,0.4325],[0.6835,0.4307]], color: '255,255,255' },
+      { points: [[0.7529,0.3542],[0.7726,0.3552],[0.7747,0.5209],[0.7535,0.5227]], color: '247,95,126' },
+      { points: [[0.5478,0.0890],[0.5572,0.0900],[0.5644,0.1047],[0.5665,0.1139],[0.5654,0.1286],[0.5597,0.1397],[0.5540,0.1461],[0.5426,0.1452],[0.5364,0.1351],[0.5359,0.1176],[0.5359,0.1065]], color: '38,204,242' },
+      { points: [[0.4012,0.3183],[0.4054,0.3192],[0.4033,0.3239]], color: '183,76,95' },
+    ],
+    fx: {
+      rain: { count: 420, wind: 165, color: '205,224,255' },
+      fog:  { count: 5,   color: 'rgba(120,150,205,1)' },
+      dust: { count: 22,  color: 'rgba(190,200,255,1)' },
+    },
+    reflection: { strength: 0.75 },
+    events: { lightning: true, portalSurge: true, glowPulse: true, runeFlash: true, birds: false, ghost: false, gapMin: 9, gapMax: 22 },
+  };
+
+  const cv = document.getElementById('menu-cv');
+  if (!cv || typeof window.LivingPainting !== 'function') return;   // engine missing → static poster stays
+  let lp = null, paused = false, revealed = false;
+  try { lp = new window.LivingPainting(cv, SCENE).start(); window.__lp = lp; }
+  catch (e) { console.warn('living-painting failed to start; static poster remains', e); return; }
+
+  // Reveal the instant the engine has actually rendered a frame (lp.t advances every frame),
+  // so we never flash an undrawn canvas and never rely on a fixed rAF count a throttled tab
+  // can skip. Visible tab → fires within ~1 frame; hidden tab → waits (static poster shows)
+  // and reveals as soon as it's focused. This replaced a fragile double-rAF that could no-op.
+  (function tryReveal(){
+    if (revealed) return;
+    if (lp && lp.t > 0) { cv.classList.add('ready'); revealed = true; return; }
+    requestAnimationFrame(tryReveal);
+  })();
+
+  const pause  = () => { if (lp && lp._raf) { cancelAnimationFrame(lp._raf); lp._raf = null; paused = true; } };
+  const resume = () => { if (lp && paused) { paused = false; lp.last = 0; lp._raf = requestAnimationFrame(lp.frame.bind(lp)); } };
+
+  // battery-friendly: pause when the hero scrolls off-screen or the tab is hidden — but never
+  // before the first frame has revealed (guards a boot-time false-negative from freezing it).
+  const hero = document.querySelector('.hero');
+  if ('IntersectionObserver' in window && hero) {
+    new IntersectionObserver(es => { for (const e of es) { if (e.isIntersecting) resume(); else if (revealed) pause(); } }, { threshold: 0.02 }).observe(hero);
+  }
+  document.addEventListener('visibilitychange', () => { document.hidden ? pause() : resume(); });
+})();
+</script>
+
+</body>
+</html>
